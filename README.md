@@ -11,8 +11,7 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/GALAXYCODERS/FlowSnip/build.yml?style=flat-square&label=build)](https://github.com/GALAXYCODERS/FlowSnip/actions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
 
-<!-- TODO: Replace with an actual GIF/video of FlowSnip in action (800px wide recommended) -->
-<!-- ![FlowSnip Demo](assets/demo.gif) -->
+<video src="assets/FlowSnipDemo2HighRes.mp4" width="800" autoplay loop muted playsinline></video>
 
 <br>
 
