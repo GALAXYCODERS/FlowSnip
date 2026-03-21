@@ -13,7 +13,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let overlayManager = OverlayWindowManager()
     private let captureEngine = CaptureEngine()
     private var onboardingWindow: NSWindow?
-    private var eventTapRetryTimer: Timer?
 
     /// UserDefaults key to track whether onboarding has been completed.
     private let onboardingCompletedKey = "FlowSnip_OnboardingCompleted"
@@ -21,7 +20,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        print("🚀 FlowSnip: App launched")
         setupStatusBarItem()
+
+        // Register global shortcut (Carbon + NSEvent dual approach)
+        setupEventTapManager()
+
+        // Prompt for Accessibility if not yet granted (needed for NSEvent global monitor)
+        if !AXIsProcessTrusted() {
+            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true]
+            _ = AXIsProcessTrustedWithOptions(options)
+        }
 
         // Observe capture failures to redirect user to onboarding
         NotificationCenter.default.addObserver(
@@ -35,16 +44,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !UserDefaults.standard.bool(forKey: onboardingCompletedKey) {
             showOnboarding()
         } else {
-            finishSetup()
+            checkScreenRecording()
         }
-    }
-
-    /// Called after onboarding completes (or is skipped on returning launches).
-    private func finishSetup() {
-        // Ask for permission FIRST, then try to install the event tap
-        checkPermissions()
-        setupEventTapManager()
-        startEventTapRetryTimer()
     }
 
     // MARK: - Onboarding
@@ -61,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(true, forKey: self.onboardingCompletedKey)
             self.onboardingWindow?.close()
             self.onboardingWindow = nil
-            self.finishSetup()
+            self.checkScreenRecording()
         }
 
         let window = NSWindow(
@@ -117,27 +118,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         eventTapManager.start()
     }
 
-    /// Polls every 2 seconds until the event tap is successfully created.
-    /// This handles the case where the user grants Accessibility permission
-    /// after the app has already launched.
-    private func startEventTapRetryTimer() {
-        guard !eventTapManager.isRunning else { return }
-
-        eventTapRetryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
-            guard let self = self else { timer.invalidate(); return }
-
-            if AXIsProcessTrusted() {
-                self.eventTapManager.stop()
-                self.eventTapManager.start()
-                if self.eventTapManager.isRunning {
-                    timer.invalidate()
-                    self.eventTapRetryTimer = nil
-                    print("✅ FlowSnip: Event tap created after permission grant.")
-                }
-            }
-        }
-    }
-
     // MARK: - Capture Flow
 
     private func startCaptureFlow() {
@@ -151,18 +131,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     return
                 }
 
-                // Tell event tap manager to pass through keys while overlay is active
-                self.eventTapManager.setOverlayActive(true)
-
-                // Reset overlay active state when overlay is dismissed (e.g. via Escape)
-                self.overlayManager.onDismiss = { [weak self] in
-                    self?.eventTapManager.setOverlayActive(false)
-                }
-
                 self.overlayManager.showOverlay { [weak self] selectedRect, screen in
                     guard let self = self else { return }
 
-                    self.eventTapManager.setOverlayActive(false)
                     self.overlayManager.hideOverlay()
 
                     // Allow window server time to fully remove overlay from compositing
@@ -186,14 +157,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Permissions
 
-    private func checkPermissions() {
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true]
-        let accessibilityEnabled = AXIsProcessTrustedWithOptions(options)
-
-        if !accessibilityEnabled {
-            print("⚠️ FlowSnip: Accessibility permission required.")
-        }
-
+    private func checkScreenRecording() {
         Task {
             let screenRecordingEnabled = await checkScreenRecordingPermission()
             if !screenRecordingEnabled {
@@ -227,7 +191,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func checkPermissionsTapped() {
-        checkPermissions()
         showOnboarding()
     }
 

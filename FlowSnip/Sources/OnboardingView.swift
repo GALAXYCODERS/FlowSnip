@@ -3,7 +3,7 @@ import Cocoa
 import ScreenCaptureKit
 
 /// A multi-step onboarding window shown on first launch.
-/// Walks the user through: Welcome → Accessibility Permission → Screen Recording Permission → How to Use.
+/// Walks the user through: Welcome → Accessibility → Screen Recording → How to Use.
 struct OnboardingView: View {
 
     @State private var currentStep = 0
@@ -18,7 +18,6 @@ struct OnboardingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Content area
             Group {
                 switch currentStep {
                 case 0: welcomeStep
@@ -37,7 +36,6 @@ struct OnboardingView: View {
 
             Divider()
 
-            // Bottom bar with dots & buttons
             bottomBar
                 .padding(.horizontal, 28)
                 .padding(.vertical, 16)
@@ -128,7 +126,7 @@ struct OnboardingView: View {
                     stepsCard(steps: [
                         "Click \"Open System Settings\" below",
                         "Find  FlowSnip  in the list",
-                        "If you see multiple FlowSnip entries, remove old ones first (select → minus button)",
+                        "If you see multiple FlowSnip entries, remove old ones first (select \u{2192} minus button)",
                         "Toggle it  ON",
                         "Come back and click \"Verify Permission\""
                     ])
@@ -145,7 +143,6 @@ struct OnboardingView: View {
                         .buttonStyle(.bordered)
                     }
 
-                    // Feedback message
                     if let message = permissionMessage {
                         Label(message, systemImage: permissionMessageIsError ? "xmark.circle.fill" : "checkmark.circle.fill")
                             .font(.system(size: 13, weight: .medium))
@@ -208,7 +205,6 @@ struct OnboardingView: View {
                         .buttonStyle(.bordered)
                     }
 
-                    // Feedback message
                     if let message = permissionMessage {
                         Label(message, systemImage: permissionMessageIsError ? "xmark.circle.fill" : "checkmark.circle.fill")
                             .font(.system(size: 13, weight: .medium))
@@ -244,19 +240,18 @@ struct OnboardingView: View {
             Text("You're All Set!")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
 
-            // Shortcut test area
             VStack(spacing: 12) {
                 Text("Try your shortcut now:")
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
 
                 HStack(spacing: 5) {
-                    keyCapView("⌘")
-                    keyCapView("⇧")
+                    keyCapView("\u{2318}")
+                    keyCapView("\u{21E7}")
                     keyCapView("2")
                 }
 
-                Text("Press  ⌘ + Shift + 2  to test it!")
+                Text("Press  \u{2318} + Shift + 2  to test it!")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.accentColor)
             }
@@ -274,17 +269,14 @@ struct OnboardingView: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 howToRow(icon: "command", iconColor: .blue,
-                         title: "⌘ + Shift + 2",
+                         title: "\u{2318} + Shift + 2",
                          subtitle: "Instantly opens the capture overlay")
-
                 howToRow(icon: "rectangle.dashed", iconColor: .purple,
                          title: "Click and drag to select",
                          subtitle: "A liquid glass box follows your cursor")
-
                 howToRow(icon: "doc.on.clipboard.fill", iconColor: .green,
                          title: "Release to copy",
                          subtitle: "Image goes straight to your clipboard")
-
                 howToRow(icon: "escape", iconColor: .gray,
                          title: "Esc — Cancel",
                          subtitle: "Dismiss without capturing")
@@ -292,14 +284,13 @@ struct OnboardingView: View {
 
             Spacer()
 
-            Text("FlowSnip lives in your menu bar  ✂️")
+            Text("FlowSnip lives in your menu bar  \u{2702}\u{FE0F}")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
         }
         .padding(32)
     }
 
-    /// A single keyboard key cap visual.
     private func keyCapView(_ key: String) -> some View {
         Text(key)
             .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -332,7 +323,6 @@ struct OnboardingView: View {
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundColor(.secondary)
                         .frame(width: 18, alignment: .trailing)
-
                     Text(step)
                         .font(.system(size: 13))
                         .foregroundColor(.primary.opacity(0.8))
@@ -353,7 +343,6 @@ struct OnboardingView: View {
                 .font(.system(size: 18))
                 .foregroundColor(iconColor)
                 .frame(width: 28)
-
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
@@ -368,7 +357,6 @@ struct OnboardingView: View {
 
     private var bottomBar: some View {
         HStack {
-            // Step indicators
             HStack(spacing: 6) {
                 ForEach(0..<totalSteps, id: \.self) { step in
                     Circle()
@@ -410,7 +398,6 @@ struct OnboardingView: View {
 
     private func refreshPermissionStatus() {
         accessibilityGranted = AXIsProcessTrusted()
-        // Screen recording check is async
         Task {
             let granted = await checkScreenRecordingPermission()
             await MainActor.run {
@@ -420,7 +407,9 @@ struct OnboardingView: View {
     }
 
     private func verifyAccessibility() {
-        let granted = AXIsProcessTrusted()
+        // Prompt the system dialog if not yet trusted
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true]
+        let granted = AXIsProcessTrustedWithOptions(options) as Bool
         withAnimation {
             accessibilityGranted = granted
             if granted {
@@ -435,9 +424,7 @@ struct OnboardingView: View {
 
     private func verifyScreenRecording() {
         Task {
-            // First explicitly request it so the prompt appears if needed
             await requestScreenRecordingPermission()
-            
             let granted = await checkScreenRecordingPermission()
             await MainActor.run {
                 withAnimation {
@@ -446,7 +433,7 @@ struct OnboardingView: View {
                         permissionMessage = "Screen Recording is enabled!"
                         permissionMessageIsError = false
                     } else {
-                        permissionMessage = "Not yet enabled — toggle FlowSnip ON, then restart the app"
+                        permissionMessage = "Not yet enabled \u{2014} toggle FlowSnip ON, then restart the app"
                         permissionMessageIsError = true
                     }
                 }
@@ -454,12 +441,10 @@ struct OnboardingView: View {
         }
     }
 
-    /// Explicitly requests permission, forcing the OS prompt to appear.
     private func requestScreenRecordingPermission() async {
         if #available(macOS 14.4, *) {
             CGRequestScreenCaptureAccess()
         } else {
-            // Legacy way to force the prompt on macOS 13/14: request a display stream
             if let display = CGMainDisplayID() as CGDirectDisplayID? {
                 let _ = CGDisplayStream(
                     display: display,
@@ -471,12 +456,9 @@ struct OnboardingView: View {
                 )
             }
         }
-        
-        // Give the OS a tiny fraction of a second to register the prompt
         try? await Task.sleep(nanoseconds: 500_000_000)
     }
 
-    /// Reliable Screen Recording permission check.
     private func checkScreenRecordingPermission() async -> Bool {
         if #available(macOS 14.4, *) {
             return CGPreflightScreenCaptureAccess()
