@@ -36,12 +36,10 @@ final class OverlayWindowManager {
         }
 
         // Listen for Escape to cancel
-        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // Escape
                 self?.dismissOverlay()
-                return nil
             }
-            return event
         }
 
         // Hide the cursor and show crosshair

@@ -16,6 +16,15 @@ Packages/
 *.dmg
 *.ipa
 
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
 # Internal dev docs
 implementation_plan.md
 task.md
