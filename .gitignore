@@ -5,5 +5,20 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+
 # macOS
 .DS_Store
+*.app
+*.dmg
+*.ipa
+
+# Internal dev docs
+implementation_plan.md
+task.md
+
+# Claude Code
+.claude/

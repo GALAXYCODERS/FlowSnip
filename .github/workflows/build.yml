@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build FlowSnip
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project FlowSnip.xcodeproj \
+            -scheme FlowSnip \
+            -destination 'platform=macOS' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color
+
+      - name: Build Release
+        run: |
+          xcodebuild build \
+            -project FlowSnip.xcodeproj \
+            -scheme FlowSnip \
+            -destination 'platform=macOS' \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color
