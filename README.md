@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/icon.png" alt="FlowSnip Icon" width="128">
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.png">
