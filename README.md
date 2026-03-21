@@ -93,9 +93,20 @@ First-launch wizard walks you through Accessibility and Screen Recording permiss
 
 ## Download
 
-### DMG Installer
+### Direct (ZIP)
 
-> **Coming soon** — A `.dmg` installer will be available on the [Releases](../../releases) page.
+Download the latest `FlowSnip.zip` from the [Releases](../../releases) page, then run this in your Terminal:
+
+```bash
+cd ~/Downloads && \
+unzip FlowSnip.zip && \
+mv FlowSnip.app /Applications/ && \
+xattr -dr com.apple.quarantine /Applications/FlowSnip.app && \
+open /Applications/FlowSnip.app && \
+echo "✓ FlowSnip installed"
+```
+
+> FlowSnip is not notarized (no Apple Developer account). The `xattr` command removes the macOS quarantine flag — this is normal for apps distributed outside the App Store.
 
 ### Build from Source
 
