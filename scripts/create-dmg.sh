@@ -44,7 +44,7 @@ if [[ "$SKIP_BUILD" == false ]]; then
         -scheme "$SCHEME" \
         -configuration Release \
         -derivedDataPath build/DerivedData \
-        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGN_STYLE=Automatic \
         CONFIGURATION_BUILD_DIR="$(pwd)/${BUILD_DIR}" \
         | tail -n 5
 
@@ -66,7 +66,6 @@ echo -e "${BLUE}[2/4] Preparing DMG contents...${NC}"
 rm -rf "$DMG_DIR"
 mkdir -p "$DMG_DIR"
 cp -R "${BUILD_DIR}/${APP_NAME}.app" "$DMG_DIR/"
-ln -s /Applications "$DMG_DIR/Applications"
 
 # Step 3: Create DMG
 echo -e "${BLUE}[3/4] Creating DMG...${NC}"
@@ -85,11 +84,16 @@ if command -v create-dmg &> /dev/null; then
         --app-drop-link 480 190 \
         --no-internet-enable \
         "$DMG_OUTPUT" \
-        "$DMG_DIR/" \
-        || true
+        "$DMG_DIR/"
+    # create-dmg returns exit code 2 when it can't set background but DMG was created
+    if [[ ! -f "$DMG_OUTPUT" ]]; then
+        echo "Error: DMG creation failed."
+        exit 1
+    fi
 else
-    # Fallback: basic DMG with hdiutil
+    # Fallback: basic DMG with hdiutil — needs manual Applications symlink
     echo "  (Tip: Install 'create-dmg' for a prettier DMG: brew install create-dmg)"
+    ln -s /Applications "$DMG_DIR/Applications"
     hdiutil create \
         -volname "$VOLUME_NAME" \
         -srcfolder "$DMG_DIR" \
