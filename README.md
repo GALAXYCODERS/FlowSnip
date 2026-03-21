@@ -2,12 +2,6 @@
 
 <img src="assets/icon.png" alt="FlowSnip Icon" width="128">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.png">
-  <img alt="FlowSnip" src="assets/banner-light.png" width="600">
-</picture>
-
 ### Lightning-fast screen capture for macOS.
 **Snip it. Copy it. Paste it. Done.**
 
