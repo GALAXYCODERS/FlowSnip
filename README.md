@@ -103,7 +103,7 @@ unzip FlowSnip.zip && \
 mv FlowSnip.app /Applications/ && \
 xattr -dr com.apple.quarantine /Applications/FlowSnip.app && \
 open /Applications/FlowSnip.app && \
-echo "✓ FlowSnip installed"
+echo "✓ FlowSnip installed and launched"
 ```
 
 > FlowSnip is not notarized (no Apple Developer account). The `xattr` command removes the macOS quarantine flag — this is normal for apps distributed outside the App Store.
