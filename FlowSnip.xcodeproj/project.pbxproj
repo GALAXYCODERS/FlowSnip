@@ -15,6 +15,7 @@
 		AA000006 /* CaptureEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000006 /* CaptureEngine.swift */; };
 		AA000007 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000007 /* OnboardingView.swift */; };
 		AA000008 /* ClipboardToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000008 /* ClipboardToastView.swift */; };
+		AA000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB000012 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 		BB000008 /* ClipboardToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardToastView.swift; sourceTree = "<group>"; };
 		BB000010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB000011 /* FlowSnip.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FlowSnip.entitlements; sourceTree = "<group>"; };
+		BB000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CC000001 /* FlowSnip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlowSnip.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -40,6 +42,17 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DD000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000009 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXGroup section */
 		EE000001 = {
@@ -85,6 +98,7 @@
 		EE000005 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				BB000012 /* Assets.xcassets */,
 				BB000010 /* Info.plist */,
 				BB000011 /* FlowSnip.entitlements */,
 			);
@@ -100,6 +114,7 @@
 			buildPhases = (
 				FF000002 /* Sources */,
 				DD000001 /* Frameworks */,
+				DD000002 /* Resources */,
 			);
 			buildRules = (
 			);
