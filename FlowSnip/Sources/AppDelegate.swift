@@ -145,6 +145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                         .generic,
                                         performanceTime: .default
                                     )
+                                    self.overlayManager.showClipboardToast(on: screen)
                                 }
                                 self.overlayManager.dismissOverlay()
                             }

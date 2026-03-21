@@ -14,6 +14,7 @@
 		AA000005 /* LiquidOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000005 /* LiquidOverlayView.swift */; };
 		AA000006 /* CaptureEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000006 /* CaptureEngine.swift */; };
 		AA000007 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000007 /* OnboardingView.swift */; };
+		AA000008 /* ClipboardToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000008 /* ClipboardToastView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +25,7 @@
 		BB000005 /* LiquidOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidOverlayView.swift; sourceTree = "<group>"; };
 		BB000006 /* CaptureEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureEngine.swift; sourceTree = "<group>"; };
 		BB000007 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		BB000008 /* ClipboardToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardToastView.swift; sourceTree = "<group>"; };
 		BB000010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB000011 /* FlowSnip.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FlowSnip.entitlements; sourceTree = "<group>"; };
 		CC000001 /* FlowSnip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlowSnip.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -67,6 +69,7 @@
 				BB000005 /* LiquidOverlayView.swift */,
 				BB000006 /* CaptureEngine.swift */,
 				BB000007 /* OnboardingView.swift */,
+				BB000008 /* ClipboardToastView.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -147,6 +150,7 @@
 				AA000005 /* LiquidOverlayView.swift in Sources */,
 				AA000006 /* CaptureEngine.swift in Sources */,
 				AA000007 /* OnboardingView.swift in Sources */,
+				AA000008 /* ClipboardToastView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -152,6 +152,49 @@ final class OverlayWindowManager {
         return window
     }
 
+    // MARK: - Clipboard Toast
+
+    private var toastWindow: NSWindow?
+
+    /// Shows a "Copied to Clipboard" liquid glass toast centered near the bottom of the given screen.
+    func showClipboardToast(on screen: NSScreen) {
+        // Remove any existing toast
+        toastWindow?.orderOut(nil)
+
+        let toastSize = NSSize(width: 260, height: 52)
+        let origin = NSPoint(
+            x: screen.frame.midX - toastSize.width / 2,
+            y: screen.frame.minY + screen.frame.height * 0.3 - toastSize.height / 2
+        )
+
+        let window = NSWindow(
+            contentRect: NSRect(origin: origin, size: toastSize),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false,
+            screen: screen
+        )
+        window.level = .floating
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.ignoresMouseEvents = true
+        window.hasShadow = false
+        window.collectionBehavior = [.canJoinAllSpaces, .transient]
+
+        let hostingView = NSHostingView(rootView: ClipboardToastView())
+        hostingView.frame = NSRect(origin: .zero, size: toastSize)
+        window.contentView = hostingView
+        window.orderFrontRegardless()
+
+        self.toastWindow = window
+
+        // Auto-dismiss after animations complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
+            self?.toastWindow?.orderOut(nil)
+            self?.toastWindow = nil
+        }
+    }
+
     // MARK: - Selection Handling
 
     private func handleSelection(rect: CGRect, screen: NSScreen) {
