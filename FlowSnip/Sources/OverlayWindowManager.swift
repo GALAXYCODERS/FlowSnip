@@ -15,6 +15,8 @@ final class OverlayWindowManager {
     private var overlayWindows: [NSWindow] = []
     private var selectionHandler: SelectionHandler?
     private var escapeMonitor: Any?
+    private var localEscapeMonitor: Any?
+    private var cursorIsPushed = false
 
     /// Called when the overlay is dismissed (via Escape or after capture).
     var onDismiss: (() -> Void)?
@@ -23,14 +25,14 @@ final class OverlayWindowManager {
 
     /// Shows the capture overlay on all screens.
     /// - Parameter onSelection: Called with the selected rect (in screen coordinates) and the screen it belongs to.
-    func showOverlay(onSelection: @escaping SelectionHandler) {
+    func showOverlay(mode: CaptureMode = .screenshot, onSelection: @escaping SelectionHandler) {
         // Clean up any existing overlay
         dismissOverlay(animated: false)
 
         self.selectionHandler = onSelection
 
         for screen in NSScreen.screens {
-            let window = createOverlayWindow(for: screen)
+            let window = createOverlayWindow(for: screen, mode: mode)
             overlayWindows.append(window)
             window.orderFrontRegardless()
         }
@@ -41,19 +43,20 @@ final class OverlayWindowManager {
                 self?.dismissOverlay()
             }
         }
+        localEscapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == 53 else { return event }
+            self?.dismissOverlay()
+            return nil
+        }
 
         // Hide the cursor and show crosshair
         NSCursor.crosshair.push()
+        cursorIsPushed = true
     }
 
     /// Dismisses all overlay windows with an optional fade animation.
     func dismissOverlay(animated: Bool = true) {
-        if let monitor = escapeMonitor {
-            NSEvent.removeMonitor(monitor)
-            escapeMonitor = nil
-        }
-
-        NSCursor.pop()
+        restoreInput()
 
         let windows = overlayWindows
         overlayWindows.removeAll()
@@ -84,16 +87,11 @@ final class OverlayWindowManager {
 
     // MARK: - Public API (Hide for Capture)
 
-    /// Fully removes overlay windows from screen so CGWindowListCreateImage
+    /// Fully removes overlay windows from screen so ScreenCaptureKit
     /// sees only the real desktop content. orderOut removes the windows from
     /// the window server's compositing list entirely.
     func hideOverlay() {
-        // Remove the escape monitor so it doesn't interfere
-        if let monitor = escapeMonitor {
-            NSEvent.removeMonitor(monitor)
-            escapeMonitor = nil
-        }
-        NSCursor.pop()
+        restoreInput()
 
         for window in overlayWindows {
             window.orderOut(nil)
@@ -104,7 +102,18 @@ final class OverlayWindowManager {
 
     // MARK: - Window Creation
 
-    private func createOverlayWindow(for screen: NSScreen) -> NSWindow {
+    private func restoreInput() {
+        if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor) }
+        if let localEscapeMonitor { NSEvent.removeMonitor(localEscapeMonitor) }
+        escapeMonitor = nil
+        localEscapeMonitor = nil
+        if cursorIsPushed {
+            NSCursor.pop()
+            cursorIsPushed = false
+        }
+    }
+
+    private func createOverlayWindow(for screen: NSScreen, mode: CaptureMode) -> NSWindow {
         let window = NSWindow(
             contentRect: screen.frame,
             styleMask: [.borderless],
@@ -125,6 +134,8 @@ final class OverlayWindowManager {
         // so the actual screen content remains visible through the transparent window.
         let overlayView = LiquidOverlayView(
             screenFrame: screen.frame,
+            mode: mode,
+            pixelScale: screen.backingScaleFactor,
             onSelectionComplete: { [weak self] rect in
                 self?.handleSelection(rect: rect, screen: screen)
             },
@@ -182,12 +193,19 @@ final class OverlayWindowManager {
         let hostingView = NSHostingView(rootView: ClipboardToastView())
         hostingView.frame = NSRect(origin: .zero, size: toastSize)
         window.contentView = hostingView
+
+        // Must be set AFTER assigning as contentView — window setup can reset layer state
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = CGColor.clear
+        hostingView.layer?.isOpaque = false
+
         window.orderFrontRegardless()
 
         self.toastWindow = window
 
         // Auto-dismiss after animations complete
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
+            guard self?.toastWindow === window else { return }
             self?.toastWindow?.orderOut(nil)
             self?.toastWindow = nil
         }
@@ -200,6 +218,8 @@ final class OverlayWindowManager {
             // Selection too small — ignore accidentally tiny drags
             return
         }
-        selectionHandler?(rect, screen)
+        let handler = selectionHandler
+        selectionHandler = nil
+        handler?(rect, screen)
     }
 }

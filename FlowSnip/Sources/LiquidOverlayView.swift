@@ -8,8 +8,12 @@ struct LiquidOverlayView: View {
     // MARK: - Properties
 
     let screenFrame: CGRect
+    var mode: CaptureMode = .screenshot
+    var pixelScale: CGFloat = 1
     let onSelectionComplete: (CGRect) -> Void
     let onCancel: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @State private var dragStart: CGPoint? = nil
     @State private var dragCurrent: CGPoint? = nil
@@ -49,7 +53,7 @@ struct LiquidOverlayView: View {
                 // If dragging, show the selection border and size
                 if isDragging, selectionRect.width > 2 && selectionRect.height > 2 {
                     // The beautiful liquid glass border
-                    selectionBorderLayer
+                    if mode == .aiScan { aiSelectionBorderLayer } else { selectionBorderLayer }
 
                     // Size indicator
                     sizeIndicator
@@ -64,17 +68,26 @@ struct LiquidOverlayView: View {
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .local)
                     .onChanged { value in
+                        guard !selectionCompleted else { return }
                         if dragStart == nil {
                             dragStart = value.startLocation
                             withAnimation(.easeOut(duration: 0.1)) {
                                 showHint = false
                             }
                         }
-                        dragCurrent = value.location
+                        dragCurrent = CGPoint(x: min(max(value.location.x, 0), geometry.size.width),
+                            y: min(max(value.location.y, 0), geometry.size.height))
                         isDragging = true
                     }
                     .onEnded { _ in
+                        guard !selectionCompleted else { return }
                         isDragging = false
+                        guard selectionRect.width > 5, selectionRect.height > 5 else {
+                            dragStart = nil
+                            dragCurrent = nil
+                            showHint = true
+                            return
+                        }
                         selectionCompleted = true
 
                         // Convert to screen coordinates
@@ -88,6 +101,25 @@ struct LiquidOverlayView: View {
             )
         }
         .edgesIgnoringSafeArea(.all)
+    }
+
+    private var aiSelectionBorderLayer: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { timeline in
+            let angle = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 3) * 120
+            RoundedRectangle(cornerRadius: dynamicCornerRadius)
+                .stroke(AngularGradient(colors: [.mint, .white, .cyan.opacity(0.6), .mint.opacity(0.3), .white, .mint],
+                    center: .center, angle: .degrees(angle)), lineWidth: 2)
+                .frame(width: selectionRect.width, height: selectionRect.height)
+                .position(x: selectionRect.midX, y: selectionRect.midY)
+                .shadow(color: .mint.opacity(0.45), radius: 10, x: 0, y: 0)
+                .overlay {
+                    RoundedRectangle(cornerRadius: dynamicCornerRadius)
+                        .stroke(.white.opacity(0.7), lineWidth: 0.5)
+                        .frame(width: selectionRect.width - 3, height: selectionRect.height - 3)
+                        .position(x: selectionRect.midX, y: selectionRect.midY)
+                }
+        }
+        .accessibilityLabel("AI scan selection")
     }
 
     // MARK: - Dim Layer with Cutout
@@ -171,33 +203,36 @@ struct LiquidOverlayView: View {
 
     /// Displays the pixel dimensions of the selection.
     private var sizeIndicator: some View {
-        let width = Int(selectionRect.width)
-        let height = Int(selectionRect.height)
+        let width = Int((selectionRect.width * pixelScale).rounded(.up))
+        let height = Int((selectionRect.height * pixelScale).rounded(.up))
 
-        return Text("\(width) × \(height)")
+        return HStack(spacing: 6) {
+            if mode == .aiScan { Image(systemName: "sparkles") }
+            Text("\(width) × \(height)")
+        }
             .font(.system(size: 11, weight: .medium, design: .monospaced))
             .foregroundColor(.white.opacity(0.85))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
                 Capsule()
-                    .fill(.ultraThinMaterial)
+                    .fill(reduceTransparency ? AnyShapeStyle(Color.black.opacity(0.9)) : AnyShapeStyle(.ultraThinMaterial))
                     .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
             )
             .position(
-                x: selectionRect.midX,
-                y: selectionRect.maxY + 24
+                x: min(max(selectionRect.midX, 72), screenFrame.width - 72),
+                y: selectionRect.maxY + 24 < screenFrame.height - 16 ? selectionRect.maxY + 24 : max(selectionRect.minY - 24, 16)
             )
     }
 
     /// Initial hint displayed when overlay opens.
     private var hintLabel: some View {
         VStack(spacing: 8) {
-            Image(systemName: "crop")
+            Image(systemName: mode == .aiScan ? "sparkles.rectangle.stack" : "crop")
                 .font(.system(size: 28, weight: .light))
                 .foregroundColor(.white.opacity(0.7))
 
-            Text("Click and drag to select a region")
+            Text(mode == .aiScan ? "AI Scan" : "Click and drag to select a region")
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundColor(.white.opacity(0.7))
 

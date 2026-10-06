@@ -18,6 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 APP_PATH="$PROJECT_DIR/build/Release/FlowSnip.app"
 ZIP_PATH="$PROJECT_DIR/build/FlowSnip.zip"
+DERIVED_DATA="${FLOWSNIP_DERIVED_DATA:-$PROJECT_DIR/build/DerivedData}"
 SKIP_BUILD=false
 
 for arg in "$@"; do
@@ -33,10 +34,33 @@ if [[ "$SKIP_BUILD" == false ]]; then
     -project FlowSnip.xcodeproj \
     -scheme FlowSnip \
     -configuration Release \
-    -derivedDataPath build/DerivedData \
-    CONFIGURATION_BUILD_DIR=build/Release \
-    CODE_SIGN_STYLE=Automatic \
-    clean build
+    -destination 'platform=macOS,arch=arm64' \
+    -derivedDataPath "$DERIVED_DATA" \
+    CONFIGURATION_BUILD_DIR="$PROJECT_DIR/build/Release" \
+    CODE_SIGNING_ALLOWED=NO \
+    -quiet \
+    build
+fi
+
+LICENSE_DIR="$APP_PATH/Contents/Resources/Licenses"
+mkdir -p "$LICENSE_DIR"
+CHECKOUT_DIR="$DERIVED_DATA/SourcePackages/checkouts"
+if [[ ! -d "$CHECKOUT_DIR" ]]; then
+  echo "Error: Package checkout licenses are unavailable in $CHECKOUT_DIR" >&2
+  exit 1
+fi
+while IFS= read -r -d '' repository; do
+  repository_name="$(basename "$repository")"
+  while IFS= read -r -d '' license_file; do
+    mkdir -p "$LICENSE_DIR/$repository_name"
+    cp "$license_file" "$LICENSE_DIR/$repository_name/$(basename "$license_file")"
+  done < <(find "$repository" -maxdepth 1 -type f \( -iname 'license*' -o -iname 'notice*' \) -print0)
+done < <(find "$CHECKOUT_DIR" -mindepth 1 -maxdepth 1 -type d -print0)
+if [[ -d "$CHECKOUT_DIR/swift-crypto/Sources/CCryptoBoringSSL" ]]; then
+  while IFS= read -r -d '' notice; do
+    mkdir -p "$LICENSE_DIR/swift-crypto/BoringSSL"
+    cp "$notice" "$LICENSE_DIR/swift-crypto/BoringSSL/$(basename "$notice")"
+  done < <(find "$CHECKOUT_DIR/swift-crypto/Sources/CCryptoBoringSSL" -maxdepth 1 -type f \( -iname '*license*' -o -iname '*notice*' \) -print0)
 fi
 
 if [[ ! -d "$APP_PATH" ]]; then
@@ -47,12 +71,13 @@ fi
 # ── 2. Ad-hoc sign ────────────────────────────────────────────────────────────
 echo "Signing app (ad-hoc)..."
 codesign --deep --force --sign - "$APP_PATH"
+codesign --verify --deep --strict "$APP_PATH"
 
 # ── 3. ZIP ────────────────────────────────────────────────────────────────────
 echo "Creating ZIP..."
 rm -f "$ZIP_PATH"
 cd "$PROJECT_DIR/build/Release"
-zip -r ../FlowSnip.zip FlowSnip.app
+ditto -c -k --sequesterRsrc --keepParent FlowSnip.app "$ZIP_PATH"
 cd "$PROJECT_DIR"
 
 echo ""

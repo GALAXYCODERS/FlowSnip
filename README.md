@@ -2,10 +2,10 @@
 
 <img src="assets/icon.png" alt="FlowSnip Icon" width="128">
 
-### Lightning-fast screen capture for macOS.
+### Screen capture and local-first AI scanning for macOS.
 **Snip it. Copy it. Paste it. Done.**
 
-[![macOS 13.0+](https://img.shields.io/badge/macOS-13.0%2B-black?style=flat-square&logo=apple&logoColor=white)](https://www.apple.com/macos/)
+[![macOS 27.0+](https://img.shields.io/badge/macOS-27.0%2B-black?style=flat-square&logo=apple&logoColor=white)](https://www.apple.com/macos/)
 [![Swift 6](https://img.shields.io/badge/Swift-6-F05138?style=flat-square&logo=swift&logoColor=white)](https://swift.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 [![Build](https://img.shields.io/github/actions/workflow/status/GALAXYCODERS/FlowSnip/build.yml?style=flat-square&label=build)](https://github.com/GALAXYCODERS/FlowSnip/actions)
@@ -64,7 +64,7 @@ The overlay spans seamlessly across all connected displays. Works with any scree
 <td>
 
 **Silent & Lightweight**
-Runs as a menu bar agent — no Dock icon, no windows, no interruptions. ~2,300 lines of code, zero dependencies.
+Runs as a menu bar agent with no Dock icon. Ordinary screenshots do not load an AI model or contact AI services; local model weights are downloaded separately.
 
 </td>
 </tr>
@@ -83,6 +83,20 @@ First-launch wizard walks you through Accessibility and Screen Recording permiss
 </td>
 </tr>
 </table>
+
+### AI Scan
+
+`Command + Option + Shift + 2` opens a distinct mint-white animated selection. Release to analyze the crop in a compact native assistant panel. Ask follow-up questions, copy the answer or image, translate captured text, or switch to the separate Vision OCR tab. AI scans leave the clipboard untouched until a copy action is selected.
+
+Open **AI Settings** from the menu bar for first-use setup:
+
+1. **On This Mac:** FlowSnip reads the chip, unified memory, Metal working-set budget, and OS locally. It recommends a pinned 4-bit vision model; confirm its download before use. An M4/M5 with 16 GB starts with Qwen3.5 4B. Larger-memory Macs can choose 9B, while the 27B profile is an optional larger-memory candidate.
+2. **OpenRouter:** Enable cloud processing, enter your own key into the secure field, and explicitly select an image-capable model. GPT-6 Luna and Gemini 3.8 Flash are suggestions; the searchable catalog includes other choices. Keys are stored in Keychain, not preferences.
+3. **Shortcut:** Record a custom AI shortcut or reset to the default. The screenshot shortcut stays unchanged.
+
+Models are stored in `~/Library/Application Support/FlowSnip/Models`, not inside the installer. Downloads can be paused/resumed or removed; **Check Performance** uses generated error, receipt, and chart fixtures. The local runtime unloads after inactivity or memory pressure. No provider/model substitution or local-to-cloud fallback occurs silently.
+
+The first local request may take several seconds while the model loads. Small local models can misread or misinterpret content; check extracted text and important numbers before relying on an answer. Calibration reports are workload-specific checks, not accuracy guarantees.
 
 ---
 
@@ -103,9 +117,17 @@ echo "✓ FlowSnip installed and launched"
 
 > FlowSnip is not notarized (no Apple Developer account). The `xattr` command removes the macOS quarantine flag — this is normal for apps distributed outside the App Store.
 
+### Update an Existing Installation
+
+Quit the running FlowSnip from its menu-bar menu. Open the new DMG, drag FlowSnip to Applications, and replace the old app; alternatively replace it with the app from the ZIP. Launch the replacement. Screenshot counts, AI preferences, and separately downloaded models remain in place. Screen Recording or Accessibility may need to be re-enabled for the updated ad-hoc-signed app.
+
+The 2.0 update requires macOS 27 and Apple Silicon. Older machines should retain the prior release. Local AI additionally requires at least 16 GB unified memory. The application is ad-hoc signed, not Developer ID notarized; only remove quarantine for a build you trust.
+
 ### Build from Source
 
-**Prerequisites:** Xcode 15+ and macOS 13.0 (Ventura) or later.
+**Prerequisites:** Xcode 27+ with the macOS 27 SDK, macOS 27.0 or later, and an Apple Silicon Mac.
+
+Install Apple's Metal compiler with `xcodebuild -downloadComponent MetalToolchain` if it is not already present. Xcode resolves the exact Swift package versions in the checked-in package lockfile. No third-party macro approval or macro-validation bypass is required.
 
 ```bash
 git clone https://github.com/GALAXYCODERS/FlowSnip.git
@@ -125,6 +147,7 @@ open FlowSnip.xcodeproj
 | Shortcut | Action |
 |---|---|
 | `⌘ + Shift + 2` | Start capture |
+| `Command + Option + Shift + 2` | Start AI scan (configurable) |
 | Click + Drag | Select screen region |
 | Release | Capture & copy to clipboard |
 | `Esc` | Cancel capture |
@@ -136,7 +159,9 @@ open FlowSnip.xcodeproj
 
 ## System Requirements
 
-- **macOS 13.0** (Ventura) or later
+- **macOS 27.0** or later
+- **Apple Silicon** Mac running natively
+- **16 GB unified memory** or more for local AI
 - **Accessibility** permission — for global keyboard shortcut detection
 - **Screen Recording** permission — for capturing screen content
 
@@ -146,11 +171,13 @@ open FlowSnip.xcodeproj
 
 | | |
 |---|---|
-| **Language** | Swift 6 |
+| **Language** | Swift 6 toolchain, Swift 5 language mode |
 | **UI** | AppKit + SwiftUI |
-| **Capture** | CoreGraphics · ScreenCaptureKit |
+| **Capture** | ScreenCaptureKit · CoreGraphics coordinates |
 | **Keyboard** | Carbon Hot Keys + NSEvent Monitors |
-| **Dependencies** | None — pure system frameworks |
+| **Local Inference** | Pinned MLX Swift vision runtime + Hugging Face tokenizer/download libraries |
+| **Cloud** | Optional user-selected OpenRouter model via URLSession |
+| **Text Extraction** | Apple Vision |
 
 <details>
 <summary><strong>Architecture Overview</strong></summary>
@@ -162,7 +189,15 @@ FlowSnip/Sources/
 ├── EventTapManager.swift      # Global shortcut (Carbon + NSEvent dual)
 ├── OverlayWindowManager.swift # Multi-screen overlay windows & toast
 ├── LiquidOverlayView.swift    # SwiftUI selection with drag gestures
-├── CaptureEngine.swift        # Screenshot capture & clipboard write
+├── CaptureEngine.swift        # ScreenCaptureKit image capture & explicit clipboard delivery
+├── CaptureWorkflow.swift      # Capture modes, shortcut/session gates, placement
+├── AIConfiguration.swift      # Hardware/model catalog, preferences, Keychain
+├── LocalModelRuntime.swift    # Offline native MLX vision inference
+├── LocalModelManager.swift    # Confirmed downloads, lifecycle, calibration
+├── AIProviders.swift          # OpenRouter streaming/catalog, OCR, image encoding
+├── AIScanCoordinator.swift    # Cancelled/stale session protection and follow-ups
+├── AIPresentation.swift       # Native assistant, settings, shortcut recorder
+├── AIValidation.swift         # Explicit synthetic validation commands
 ├── OnboardingView.swift       # Permission setup wizard
 └── ClipboardToastView.swift   # Animated success notification
 ```
@@ -175,6 +210,8 @@ FlowSnip/Sources/
 
 Contributions are welcome! Check out the [Contributing Guide](CONTRIBUTING.md) to get started.
 
+The shared **FlowSnip** scheme includes hostless tests for capture, shortcuts, settings, model eligibility, image encoding, and streaming transport. Run it with `Cmd+U` in Xcode; the opt-in live screen check is skipped by default. See the [validation record](VALIDATION.md) for measured release checks and unverified environments.
+
 Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 ---
@@ -182,6 +219,8 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 ## License
 
 FlowSnip is released under the [MIT License](LICENSE).
+
+Third-party runtime licenses are bundled with the application; see [ThirdPartyNotices.md](FlowSnip/Resources/ThirdPartyNotices.md). Model weights have their own licenses and are not bundled.
 
 ---
 

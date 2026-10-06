@@ -16,6 +16,27 @@
 		AA000007 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000007 /* OnboardingView.swift */; };
 		AA000008 /* ClipboardToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000008 /* ClipboardToastView.swift */; };
 		AA000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB000012 /* Assets.xcassets */; };
+		AA000010 /* CaptureEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000013 /* CaptureEngineTests.swift */; };
+		AA000011 /* CaptureEngine.swift in Test Sources */ = {isa = PBXBuildFile; fileRef = BB000006 /* CaptureEngine.swift */; };
+		AA000012 /* CaptureWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000014 /* CaptureWorkflow.swift */; };
+		AA000013 /* CaptureWorkflow.swift in Test Sources */ = {isa = PBXBuildFile; fileRef = BB000014 /* CaptureWorkflow.swift */; };
+		AA000014 /* AIWorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000015 /* AIWorkflowTests.swift */; };
+		AA000015 /* LocalModelRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000016 /* LocalModelRuntime.swift */; };
+		AA000016 /* AIConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000017 /* AIConfiguration.swift */; };
+		AA000017 /* AIConfiguration.swift in Test Sources */ = {isa = PBXBuildFile; fileRef = BB000017 /* AIConfiguration.swift */; };
+		AA000018 /* LocalModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000018 /* LocalModelManager.swift */; };
+		AA000019 /* AIProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000019 /* AIProviders.swift */; };
+		AA000020 /* AIProviders.swift in Test Sources */ = {isa = PBXBuildFile; fileRef = BB000019 /* AIProviders.swift */; };
+		AA000021 /* AIProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000020 /* AIProviderTests.swift */; };
+		AA000022 /* AIScanCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000021 /* AIScanCoordinator.swift */; };
+		AA000023 /* AIPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000022 /* AIPresentation.swift */; };
+		AA000024 /* AIValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000023 /* AIValidation.swift */; };
+		AA000025 /* ThirdPartyNotices.md in Resources */ = {isa = PBXBuildFile; fileRef = BB000024 /* ThirdPartyNotices.md */; };
+		AA000100 /* MLXVLM in Frameworks */ = {isa = PBXBuildFile; productRef = DF000001 /* MLXVLM */; };
+		AA000101 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = DF000002 /* MLXLMCommon */; };
+		AA000103 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = DF000004 /* HuggingFace */; };
+		AA000104 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = DF000005 /* Tokenizers */; };
+		AA000105 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = DF000006 /* MLX */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,11 +51,36 @@
 		BB000010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BB000011 /* FlowSnip.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FlowSnip.entitlements; sourceTree = "<group>"; };
 		BB000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BB000013 /* CaptureEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureEngineTests.swift; sourceTree = "<group>"; };
+		BB000014 /* CaptureWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureWorkflow.swift; sourceTree = "<group>"; };
+		BB000015 /* AIWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIWorkflowTests.swift; sourceTree = "<group>"; };
+		BB000016 /* LocalModelRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelRuntime.swift; sourceTree = "<group>"; };
+		BB000017 /* AIConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConfiguration.swift; sourceTree = "<group>"; };
+		BB000018 /* LocalModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelManager.swift; sourceTree = "<group>"; };
+		BB000019 /* AIProviders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviders.swift; sourceTree = "<group>"; };
+		BB000020 /* AIProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderTests.swift; sourceTree = "<group>"; };
+		BB000021 /* AIScanCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIScanCoordinator.swift; sourceTree = "<group>"; };
+		BB000022 /* AIPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPresentation.swift; sourceTree = "<group>"; };
+		BB000023 /* AIValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIValidation.swift; sourceTree = "<group>"; };
+		BB000024 /* ThirdPartyNotices.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.md; sourceTree = "<group>"; };
 		CC000001 /* FlowSnip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlowSnip.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC000002 /* FlowSnipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FlowSnipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		DD000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000100 /* MLXVLM in Frameworks */,
+				AA000101 /* MLXLMCommon in Frameworks */,
+				AA000103 /* HuggingFace in Frameworks */,
+				AA000104 /* Tokenizers in Frameworks */,
+				AA000105 /* MLX in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		GG000003 /* Test Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -49,6 +95,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000009 /* Assets.xcassets in Resources */,
+				AA000025 /* ThirdPartyNotices.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -59,6 +106,7 @@
 			isa = PBXGroup;
 			children = (
 				EE000002 /* FlowSnip */,
+				EE000006 /* FlowSnipTests */,
 				EE000004 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -83,6 +131,14 @@
 				BB000006 /* CaptureEngine.swift */,
 				BB000007 /* OnboardingView.swift */,
 				BB000008 /* ClipboardToastView.swift */,
+				BB000014 /* CaptureWorkflow.swift */,
+				BB000016 /* LocalModelRuntime.swift */,
+				BB000017 /* AIConfiguration.swift */,
+				BB000018 /* LocalModelManager.swift */,
+				BB000019 /* AIProviders.swift */,
+				BB000021 /* AIScanCoordinator.swift */,
+				BB000022 /* AIPresentation.swift */,
+				BB000023 /* AIValidation.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -91,6 +147,7 @@
 			isa = PBXGroup;
 			children = (
 				CC000001 /* FlowSnip.app */,
+				CC000002 /* FlowSnipTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -101,8 +158,19 @@
 				BB000012 /* Assets.xcassets */,
 				BB000010 /* Info.plist */,
 				BB000011 /* FlowSnip.entitlements */,
+				BB000024 /* ThirdPartyNotices.md */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		EE000006 /* FlowSnipTests */ = {
+			isa = PBXGroup;
+			children = (
+				BB000013 /* CaptureEngineTests.swift */,
+				BB000015 /* AIWorkflowTests.swift */,
+				BB000020 /* AIProviderTests.swift */,
+			);
+			path = FlowSnipTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -121,9 +189,32 @@
 			dependencies = (
 			);
 			name = FlowSnip;
+			packageProductDependencies = (
+				DF000001 /* MLXVLM */,
+				DF000002 /* MLXLMCommon */,
+				DF000004 /* HuggingFace */,
+				DF000005 /* Tokenizers */,
+				DF000006 /* MLX */,
+			);
 			productName = FlowSnip;
 			productReference = CC000001 /* FlowSnip.app */;
 			productType = "com.apple.product-type.application";
+		};
+		GG000001 /* FlowSnipTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = GG000010 /* Build configuration list for PBXNativeTarget "FlowSnipTests" */;
+			buildPhases = (
+				GG000002 /* Test Sources */,
+				GG000003 /* Test Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FlowSnipTests;
+			productName = FlowSnipTests;
+			productReference = CC000002 /* FlowSnipTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -145,10 +236,17 @@
 			);
 			mainGroup = EE000001;
 			productRefGroup = EE000004 /* Products */;
+			packageReferences = (
+				DE000001 /* mlx-swift-lm */,
+				DE000002 /* swift-huggingface */,
+				DE000003 /* swift-transformers */,
+				DE000004 /* mlx-swift */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				FF000001 /* FlowSnip */,
+				GG000001 /* FlowSnipTests */,
 			);
 		};
 /* End PBXProject section */
@@ -166,6 +264,28 @@
 				AA000006 /* CaptureEngine.swift in Sources */,
 				AA000007 /* OnboardingView.swift in Sources */,
 				AA000008 /* ClipboardToastView.swift in Sources */,
+				AA000012 /* CaptureWorkflow.swift in Sources */,
+				AA000015 /* LocalModelRuntime.swift in Sources */,
+				AA000016 /* AIConfiguration.swift in Sources */,
+				AA000018 /* LocalModelManager.swift in Sources */,
+				AA000019 /* AIProviders.swift in Sources */,
+				AA000022 /* AIScanCoordinator.swift in Sources */,
+				AA000023 /* AIPresentation.swift in Sources */,
+				AA000024 /* AIValidation.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		GG000002 /* Test Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000010 /* CaptureEngineTests.swift in Sources */,
+				AA000011 /* CaptureEngine.swift in Test Sources */,
+				AA000013 /* CaptureWorkflow.swift in Test Sources */,
+				AA000014 /* AIWorkflowTests.swift in Sources */,
+				AA000017 /* AIConfiguration.swift in Test Sources */,
+				AA000020 /* AIProviders.swift in Test Sources */,
+				AA000021 /* AIProviderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,7 +299,7 @@
 				CODE_SIGN_ENTITLEMENTS = FlowSnip/Resources/FlowSnip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FlowSnip/Resources/Info.plist;
@@ -187,7 +307,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.christianhomborg.FlowSnip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -201,7 +321,7 @@
 				CODE_SIGN_ENTITLEMENTS = FlowSnip/Resources/FlowSnip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FlowSnip/Resources/Info.plist;
@@ -209,7 +329,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.christianhomborg.FlowSnip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -220,6 +340,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -258,7 +379,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -272,6 +393,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -308,11 +430,43 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		GG000011 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.christianhomborg.FlowSnipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		GG000012 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.christianhomborg.FlowSnipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -337,7 +491,47 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		GG000010 /* Build configuration list for PBXNativeTarget "FlowSnipTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				GG000011 /* Debug */,
+				GG000012 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DE000001 /* mlx-swift-lm */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
+			requirement = {kind = exactVersion; version = 3.32.3; };
+		};
+		DE000002 /* swift-huggingface */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface";
+			requirement = {kind = exactVersion; version = 0.13.0; };
+		};
+		DE000003 /* swift-transformers */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers";
+			requirement = {kind = exactVersion; version = 1.3.4; };
+		};
+		DE000004 /* mlx-swift */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift";
+			requirement = {kind = exactVersion; version = 0.32.3; };
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DF000001 /* MLXVLM */ = {isa = XCSwiftPackageProductDependency; package = DE000001; productName = MLXVLM; };
+		DF000002 /* MLXLMCommon */ = {isa = XCSwiftPackageProductDependency; package = DE000001; productName = MLXLMCommon; };
+		DF000004 /* HuggingFace */ = {isa = XCSwiftPackageProductDependency; package = DE000002; productName = HuggingFace; };
+		DF000005 /* Tokenizers */ = {isa = XCSwiftPackageProductDependency; package = DE000003; productName = Tokenizers; };
+		DF000006 /* MLX */ = {isa = XCSwiftPackageProductDependency; package = DE000004; productName = MLX; };
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = FF000099 /* Project object */;
 }

@@ -7,7 +7,7 @@ set -euo pipefail
 # Creates a distributable .dmg file for FlowSnip.
 #
 # Prerequisites:
-#   - Xcode 15+ with command line tools
+#   - Xcode 27+ with macOS 27 SDK and Metal compiler
 #   - Optional: create-dmg (brew install create-dmg) for fancy DMG styling
 #
 # Usage:
@@ -22,6 +22,9 @@ BUILD_DIR="build/Release"
 DMG_DIR="build/dmg"
 DMG_OUTPUT="build/${APP_NAME}.dmg"
 VOLUME_NAME="${APP_NAME}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_DIR"
 
 SKIP_BUILD=false
 if [[ "${1:-}" == "--skip-build" ]]; then
@@ -39,14 +42,7 @@ echo ""
 # Step 1: Build the app
 if [[ "$SKIP_BUILD" == false ]]; then
     echo -e "${BLUE}[1/4] Building ${APP_NAME}...${NC}"
-    xcodebuild build \
-        -project "$PROJECT" \
-        -scheme "$SCHEME" \
-        -configuration Release \
-        -derivedDataPath build/DerivedData \
-        CODE_SIGN_STYLE=Automatic \
-        CONFIGURATION_BUILD_DIR="$(pwd)/${BUILD_DIR}" \
-        | tail -n 5
+    bash "$SCRIPT_DIR/export-zip.sh"
 
     if [[ ! -d "${BUILD_DIR}/${APP_NAME}.app" ]]; then
         echo "Error: Build failed. ${APP_NAME}.app not found in ${BUILD_DIR}/"
@@ -60,6 +56,7 @@ else
         exit 1
     fi
 fi
+codesign --verify --deep --strict "${BUILD_DIR}/${APP_NAME}.app"
 
 # Step 2: Prepare DMG staging directory
 echo -e "${BLUE}[2/4] Preparing DMG contents...${NC}"
@@ -71,8 +68,9 @@ cp -R "${BUILD_DIR}/${APP_NAME}.app" "$DMG_DIR/"
 echo -e "${BLUE}[3/4] Creating DMG...${NC}"
 rm -f "$DMG_OUTPUT"
 
-if command -v create-dmg &> /dev/null; then
+if [[ "${FLOWSNIP_FANCY_DMG:-0}" == "1" ]] && command -v create-dmg &> /dev/null; then
     # Fancy DMG with create-dmg (brew install create-dmg)
+    create_dmg_exit=0
     create-dmg \
         --volname "$VOLUME_NAME" \
         --volicon "${BUILD_DIR}/${APP_NAME}.app/Contents/Resources/AppIcon.icns" \
@@ -84,7 +82,11 @@ if command -v create-dmg &> /dev/null; then
         --app-drop-link 480 190 \
         --no-internet-enable \
         "$DMG_OUTPUT" \
-        "$DMG_DIR/"
+        "$DMG_DIR/" || create_dmg_exit=$?
+    if [[ "$create_dmg_exit" -ne 0 && "$create_dmg_exit" -ne 2 ]]; then
+        echo "Error: create-dmg failed ($create_dmg_exit)."
+        exit "$create_dmg_exit"
+    fi
     # create-dmg returns exit code 2 when it can't set background but DMG was created
     if [[ ! -f "$DMG_OUTPUT" ]]; then
         echo "Error: DMG creation failed."
@@ -92,7 +94,7 @@ if command -v create-dmg &> /dev/null; then
     fi
 else
     # Fallback: basic DMG with hdiutil — needs manual Applications symlink
-    echo "  (Tip: Install 'create-dmg' for a prettier DMG: brew install create-dmg)"
+    echo "  Creating a standard app-and-Applications disk image."
     ln -s /Applications "$DMG_DIR/Applications"
     hdiutil create \
         -volname "$VOLUME_NAME" \

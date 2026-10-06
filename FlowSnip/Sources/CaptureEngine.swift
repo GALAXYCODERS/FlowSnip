@@ -5,10 +5,27 @@ extension Notification.Name {
     static let flowSnipCaptureFailure = Notification.Name("FlowSnipCaptureFailure")
 }
 
-/// Handles the actual screen capture and clipboard write pipeline.
-/// Converts screen coordinates, captures the region via CGWindowListCreateImage
-/// and writes to NSPasteboard.
+@MainActor
 final class CaptureEngine {
+
+    nonisolated init() {}
+
+    enum CaptureError: LocalizedError, Equatable {
+        case invalidRegion
+        case displayUnavailable
+        case screenRecordingPermissionRequired
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidRegion:
+                return "The selection must be a valid region within one display."
+            case .displayUnavailable:
+                return "The selected display is no longer available."
+            case .screenRecordingPermissionRequired:
+                return "Screen Recording permission is required to capture the screen."
+            }
+        }
+    }
 
     // MARK: - Public API
 
@@ -18,69 +35,95 @@ final class CaptureEngine {
     ///   - screen: The screen the selection was made on.
     ///   - completion: Called with `true` on success.
     func capture(rect: CGRect, screen: NSScreen, completion: @escaping (Bool) -> Void) {
-        // Convert to the global display coordinate space for CGWindowListCreateImage
-        let captureRect = convertToDisplayCoordinates(rect: rect, screen: screen)
+        Task {
+            do {
+                let image = try await captureImage(rect: rect, screen: screen)
+                try Task.checkCancellation()
+                completion(copyToClipboard(image))
+            } catch {
+                if !(error is CancellationError) {
+                    print("FlowSnip: Capture failed: \(error.localizedDescription)")
+                    NotificationCenter.default.post(name: .flowSnipCaptureFailure, object: nil)
+                }
+                completion(false)
+            }
+        }
+    }
 
-        // Use CGWindowListCreateImage for simplicity and reliability
-        // This captures everything visible on screen within the given rect
-        guard let cgImage = CGWindowListCreateImage(
-            captureRect,
-            .optionOnScreenOnly,
-            kCGNullWindowID,
-            [.boundsIgnoreFraming, .bestResolution]
-        ) else {
-            print("❌ FlowSnip: Failed to capture screen region. Screen Recording permission may be missing.")
-            NotificationCenter.default.post(name: .flowSnipCaptureFailure, object: nil)
-            completion(false)
-            return
+    func captureImage(rect: CGRect, screen: NSScreen) async throws -> CGImage {
+        try Task.checkCancellation()
+
+        guard CGPreflightScreenCaptureAccess() else {
+            throw CaptureError.screenRecordingPermissionRequired
+        }
+        guard let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
+            throw CaptureError.displayUnavailable
         }
 
-        // Convert CGImage → NSImage
-        let nsImage = NSImage(cgImage: cgImage, size: NSSize(
-            width: cgImage.width,
-            height: cgImage.height
-        ))
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        try Task.checkCancellation()
 
-        // Write to clipboard
-        let pasteboard = NSPasteboard.general
+        guard let display = content.displays.first(where: { $0.displayID == screenNumber.uint32Value }) else {
+            throw CaptureError.displayUnavailable
+        }
+
+        let ownApplications = content.applications.filter {
+            $0.processID == ProcessInfo.processInfo.processIdentifier
+        }
+        let filter = SCContentFilter(display: display, excludingApplications: ownApplications, exceptingWindows: [])
+        let configuration = try Self.configuration(
+            for: rect,
+            screenFrame: screen.frame,
+            pixelScale: CGFloat(filter.pointPixelScale)
+        )
+        let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
+        try Task.checkCancellation()
+        return image
+    }
+
+    @discardableResult
+    func copyToClipboard(_ image: CGImage, pasteboard: NSPasteboard = .general) -> Bool {
+        let clipboardImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
         pasteboard.clearContents()
-        let success = pasteboard.writeObjects([nsImage])
+        let success = pasteboard.writeObjects([clipboardImage])
 
         if success {
-            print("✅ FlowSnip: Captured \(cgImage.width)×\(cgImage.height) region to clipboard.")
+            print("FlowSnip: Copied \(image.width)x\(image.height) image to clipboard.")
         } else {
-            print("❌ FlowSnip: Failed to write image to clipboard.")
+            print("FlowSnip: Failed to write image to clipboard.")
         }
-
-        completion(success)
+        return success
     }
 
     // MARK: - Coordinate Conversion
 
-    /// Converts an AppKit screen-coordinate rect to the global display coordinate
-    /// system used by CGWindowListCreateImage.
-    ///
-    /// AppKit screen coordinates: origin at bottom-left of the primary display.
-    /// CGWindowList/CoreGraphics: origin at top-left of the primary display.
-    /// Note: CGWindowListCreateImage takes points (not pixels) — the .bestResolution
-    /// flag handles Retina scaling automatically.
-    private func convertToDisplayCoordinates(rect: CGRect, screen: NSScreen) -> CGRect {
-        // Get the primary screen height for the Y-flip
-        guard let primaryScreen = NSScreen.screens.first else {
-            return rect
+    static func configuration(for rect: CGRect, screenFrame: CGRect, pixelScale: CGFloat) throws -> SCStreamConfiguration {
+        guard rect.origin.x.isFinite, rect.origin.y.isFinite,
+              rect.size.width.isFinite, rect.size.height.isFinite,
+              rect.size.width > 0, rect.size.height > 0,
+              screenFrame.contains(rect),
+              pixelScale.isFinite, pixelScale > 0 else {
+            throw CaptureError.invalidRegion
         }
 
-        let primaryHeight = primaryScreen.frame.height
+        let pixelWidth = (rect.width * pixelScale).rounded(.up)
+        let pixelHeight = (rect.height * pixelScale).rounded(.up)
+        guard pixelWidth.isFinite, pixelHeight.isFinite,
+              pixelWidth < CGFloat(Int.max), pixelHeight < CGFloat(Int.max) else {
+            throw CaptureError.invalidRegion
+        }
 
-        // Flip the Y coordinate from bottom-left to top-left origin
-        let flippedY = primaryHeight - rect.origin.y - rect.height
-
-        // CGWindowListCreateImage works in display points, not pixels
-        return CGRect(
-            x: rect.origin.x,
-            y: flippedY,
+        let configuration = SCStreamConfiguration()
+        configuration.sourceRect = CGRect(
+            x: rect.minX - screenFrame.minX,
+            y: screenFrame.maxY - rect.maxY,
             width: rect.width,
             height: rect.height
         )
+        configuration.width = Int(pixelWidth)
+        configuration.height = Int(pixelHeight)
+        configuration.showsCursor = false
+        configuration.captureResolution = .best
+        return configuration
     }
 }

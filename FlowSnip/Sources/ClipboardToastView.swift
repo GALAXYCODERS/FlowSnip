@@ -65,6 +65,7 @@ struct ClipboardToastView: View {
                     )
             }
         )
+        .compositingGroup()
         .shadow(color: Color.white.opacity(0.25), radius: 10, x: 0, y: 0)
         .shadow(color: Color(red: 0.4, green: 0.7, blue: 1.0).opacity(0.15), radius: 20, x: 0, y: 0)
         .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 4)

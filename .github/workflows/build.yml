@@ -9,31 +9,57 @@ on:
 jobs:
   build:
     name: Build FlowSnip
-    runs-on: macos-15
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+      - name: Verify Toolchain
+        run: |
+          xcodebuild -version
+          sdk_version="$(xcrun --sdk macosx --show-sdk-version)"
+          os_version="$(sw_vers -productVersion)"
+          [[ "${sdk_version%%.*}" -ge 27 ]]
+          [[ "${os_version%%.*}" -ge 27 ]]
+
+      - name: Install Metal Compiler
+        run: xcodebuild -downloadComponent MetalToolchain
 
       - name: Build
         run: |
           xcodebuild build \
             -project FlowSnip.xcodeproj \
             -scheme FlowSnip \
-            -destination 'platform=macOS' \
+            -destination 'platform=macOS,arch=arm64' \
             -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty --color
+            -derivedDataPath build/DerivedData \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Build Release
         run: |
           xcodebuild build \
             -project FlowSnip.xcodeproj \
             -scheme FlowSnip \
-            -destination 'platform=macOS' \
+            -destination 'platform=macOS,arch=arm64' \
             -configuration Release \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty --color
+            -derivedDataPath build/DerivedData \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Test Capture and AI Contracts
+        env:
+          TEST_RUNNER_FLOWSNIP_CAPTURE_SMOKE_TEST: "0"
+        run: |
+          xcodebuild test \
+            -project FlowSnip.xcodeproj \
+            -scheme FlowSnip \
+            -destination 'platform=macOS,arch=arm64' \
+            -configuration Debug \
+            -derivedDataPath build/DerivedData \
+            -parallel-testing-enabled NO \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO

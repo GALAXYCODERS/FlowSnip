@@ -47,7 +47,7 @@ struct OnboardingView: View {
         .onAppear {
             refreshPermissionStatus()
         }
-        .onChange(of: currentStep) { _ in
+        .onChange(of: currentStep) {
             permissionMessage = nil
         }
     }
@@ -442,34 +442,12 @@ struct OnboardingView: View {
     }
 
     private func requestScreenRecordingPermission() async {
-        if #available(macOS 14.4, *) {
-            CGRequestScreenCaptureAccess()
-        } else {
-            if let display = CGMainDisplayID() as CGDirectDisplayID? {
-                let _ = CGDisplayStream(
-                    display: display,
-                    outputWidth: 1,
-                    outputHeight: 1,
-                    pixelFormat: Int32(kCVPixelFormatType_32BGRA),
-                    properties: nil,
-                    handler: { _, _, _, _ in }
-                )
-            }
-        }
+        CGRequestScreenCaptureAccess()
         try? await Task.sleep(nanoseconds: 500_000_000)
     }
 
     private func checkScreenRecordingPermission() async -> Bool {
-        if #available(macOS 14.4, *) {
-            return CGPreflightScreenCaptureAccess()
-        } else {
-            do {
-                let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-                return !content.windows.isEmpty
-            } catch {
-                return false
-            }
-        }
+        return CGPreflightScreenCaptureAccess()
     }
 
     private func openAccessibilitySettings() {
@@ -480,6 +458,150 @@ struct OnboardingView: View {
     private func openScreenRecordingSettings() {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
         NSWorkspace.shared.open(url)
+    }
+}
+
+// MARK: - Ready Screen (shown on restart when all permissions granted)
+
+struct ReadyScreenView: View {
+
+    let onDismiss: () -> Void
+
+    @State private var arrowOffset: CGFloat = 0
+    @State private var arrowOpacity: Double = 1
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 20) {
+                // Animated arrow pointing up to menu bar
+                VStack(spacing: 6) {
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.accentColor.opacity(0.6))
+                        .offset(y: arrowOffset - 8)
+                        .opacity(arrowOpacity * 0.5)
+
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.accentColor.opacity(0.8))
+                        .offset(y: arrowOffset - 4)
+                        .opacity(arrowOpacity * 0.75)
+
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.accentColor)
+                        .offset(y: arrowOffset)
+                        .opacity(arrowOpacity)
+                }
+                .onAppear {
+                    withAnimation(
+                        .easeInOut(duration: 0.9)
+                        .repeatForever(autoreverses: true)
+                    ) {
+                        arrowOffset = -8
+                        arrowOpacity = 0.7
+                    }
+                }
+
+                Text("Look up at your menu bar")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                Divider()
+                    .padding(.horizontal, 48)
+
+                // Status badge
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.green, .mint],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: .green.opacity(0.3), radius: 8)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("FlowSnip is ready!")
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                        Text("All permissions are set up.")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Menu bar hint
+                VStack(spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "crop")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.accentColor)
+                            .frame(width: 24, height: 24)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.accentColor.opacity(0.1))
+                            )
+
+                        Text("You'll find the FlowSnip icon (\u{2702}) in your Mac menu bar.")
+                            .font(.system(size: 13))
+                            .foregroundColor(.primary.opacity(0.75))
+                    }
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.blue)
+                            .frame(width: 24, height: 24)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.blue.opacity(0.1))
+                            )
+
+                        HStack(spacing: 4) {
+                            Text("Press")
+                                .font(.system(size: 13))
+                                .foregroundColor(.primary.opacity(0.75))
+                            Text("\u{2318}+\u{21E7}+2")
+                                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.blue)
+                            Text("to capture a region.")
+                                .font(.system(size: 13))
+                                .foregroundColor(.primary.opacity(0.75))
+                        }
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.primary.opacity(0.04))
+                )
+
+            }
+            .padding(.horizontal, 36)
+            .padding(.vertical, 28)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Got it") {
+                    onDismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 28)
+            .padding(.vertical, 16)
+        }
+        .frame(width: 480, height: 460)
+        .background(
+            VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
+        )
     }
 }
 

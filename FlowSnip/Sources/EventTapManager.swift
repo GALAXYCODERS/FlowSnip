@@ -1,165 +1,152 @@
 import Cocoa
 import Carbon
 
-/// Registers the global ⌘+Shift+2 shortcut using two parallel mechanisms:
-///
-/// 1. **Carbon Hot Key API** — no permissions needed, works on most macOS versions.
-/// 2. **NSEvent global monitor** — requires Accessibility permission, more reliable on modern macOS.
-///
-/// Whichever fires first triggers the action; the other is harmlessly ignored.
 final class EventTapManager {
-
-    // MARK: - State
-
-    private var hotKeyRef: EventHotKeyRef?
+    private var hotKeys: [CaptureMode: EventHotKeyRef] = [:]
+    private var eventHandler: EventHandlerRef?
     private var globalMonitor: Any?
+    private var localMonitor: Any?
     private var accessibilityRetryTimer: Timer?
-
-    /// Callback fired when ⌘+Shift+2 is detected.
+    private var deduplicator = ShortcutDeduplicator()
+    private var pressedCarbonActions: Set<CaptureMode> = []
+    private(set) var aiShortcut = ShortcutChord.aiScan
+    private(set) var registrationErrors: [CaptureMode: OSStatus] = [:]
     var onShortcutTriggered: (() -> Void)?
-
-    /// Whether at least one mechanism is active.
-    var isRunning: Bool { hotKeyRef != nil || globalMonitor != nil }
-
-    // MARK: - Static reference for Carbon C callback
-
+    var onActionTriggered: ((CaptureMode) -> Void)?
+    var onRegistrationError: ((String) -> Void)?
+    var isRunning: Bool { !hotKeys.isEmpty || globalMonitor != nil }
     private static var current: EventTapManager?
 
-    // MARK: - Public API
-
     func start() {
+        stop()
         EventTapManager.current = self
-
-        // Mechanism 1: Carbon Hot Key (no permissions needed)
-        registerCarbonHotKey()
-
-        // Mechanism 2: NSEvent global monitor (needs Accessibility)
+        installCarbonHandler()
+        register(.screenshot, chord: .screenshot)
+        register(.aiScan, chord: aiShortcut)
         installGlobalMonitor()
-
-        // If global monitor failed (no accessibility), retry periodically
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, let action = self.action(for: event) else { return event }
+            self.dispatch(action, isRepeat: event.isARepeat)
+            return nil
+        }
         if globalMonitor == nil {
             startAccessibilityRetry()
         }
     }
 
     func stop() {
-        unregisterCarbonHotKey()
-        removeGlobalMonitor()
+        for reference in hotKeys.values { UnregisterEventHotKey(reference) }
+        hotKeys.removeAll()
+        if let eventHandler { RemoveEventHandler(eventHandler) }
+        eventHandler = nil
+        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
+        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
+        globalMonitor = nil
+        localMonitor = nil
         accessibilityRetryTimer?.invalidate()
         accessibilityRetryTimer = nil
-        if EventTapManager.current === self {
-            EventTapManager.current = nil
+        registrationErrors.removeAll()
+        deduplicator = ShortcutDeduplicator()
+        pressedCarbonActions.removeAll()
+        if EventTapManager.current === self { EventTapManager.current = nil }
+    }
+
+    deinit { stop() }
+
+    @discardableResult
+    func updateAIShortcut(_ chord: ShortcutChord) -> Bool {
+        guard chord.isValid, chord != .screenshot else {
+            onRegistrationError?("Choose a shortcut with Command or Control that differs from the screenshot shortcut.")
+            return false
         }
+        guard chord != aiShortcut else { return true }
+        let previous = aiShortcut
+        if let reference = hotKeys.removeValue(forKey: .aiScan) { UnregisterEventHotKey(reference) }
+        aiShortcut = chord
+        guard EventTapManager.current === self else { return true }
+        if register(.aiScan, chord: chord) { return true }
+        aiShortcut = previous
+        register(.aiScan, chord: previous)
+        return false
     }
 
-    deinit {
-        stop()
-    }
-
-    // MARK: - Mechanism 1: Carbon Hot Key
-
-    private func registerCarbonHotKey() {
-        guard hotKeyRef == nil else { return }
-
-        var eventType = EventTypeSpec(
-            eventClass: UInt32(kEventClassKeyboard),
-            eventKind: UInt32(kEventHotKeyPressed)
-        )
-
-        let handlerStatus = InstallEventHandler(
+    private func installCarbonHandler() {
+        var eventTypes = [
+            EventTypeSpec(eventClass: UInt32(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
+            EventTypeSpec(eventClass: UInt32(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased))
+        ]
+        let handlerStatus = eventTypes.withUnsafeMutableBufferPointer { buffer in InstallEventHandler(
             GetApplicationEventTarget(),
-            { (_: EventHandlerCallRef?, _: EventRef?, _: UnsafeMutableRawPointer?) -> OSStatus in
-                print("🔑 FlowSnip: Carbon hot key fired!")
-                EventTapManager.current?.onShortcutTriggered?()
+            { _, event, _ in
+                guard let event else { return OSStatus(eventNotHandledErr) }
+                var identifier = EventHotKeyID()
+                let result = GetEventParameter(event, UInt32(kEventParamDirectObject), UInt32(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &identifier)
+                guard result == noErr, identifier.signature == OSType(0x464C_5350),
+                      let action = CaptureMode.allCases.first(where: { $0.hotKeyID == identifier.id }) else {
+                    return OSStatus(eventNotHandledErr)
+                }
+                guard let manager = EventTapManager.current else { return noErr }
+                if GetEventKind(event) == UInt32(kEventHotKeyReleased) {
+                    manager.pressedCarbonActions.remove(action)
+                } else if manager.pressedCarbonActions.insert(action).inserted {
+                    manager.dispatch(action)
+                }
                 return noErr
             },
-            1,
-            &eventType,
-            nil,
-            nil
-        )
-
-        guard handlerStatus == noErr else {
-            print("❌ FlowSnip: InstallEventHandler failed (\(handlerStatus))")
-            return
+            buffer.count, buffer.baseAddress, nil, &eventHandler
+        ) }
+        if handlerStatus != noErr {
+            onRegistrationError?("Keyboard handler could not be installed (\(handlerStatus)).")
         }
+    }
 
-        let hotKeyID = EventHotKeyID(
-            signature: OSType(0x464C_5350),  // "FLSP"
-            id: UInt32(1)
-        )
-
-        let registerStatus = RegisterEventHotKey(
-            UInt32(kVK_ANSI_2),              // 19 = physical "2" key (all layouts)
-            UInt32(cmdKey | shiftKey),         // ⌘+Shift
-            hotKeyID,
-            GetApplicationEventTarget(),
-            0,
-            &hotKeyRef
-        )
-
-        if registerStatus == noErr {
-            print("✅ FlowSnip: Carbon hot key ⌘+Shift+2 registered")
+    @discardableResult
+    private func register(_ action: CaptureMode, chord: ShortcutChord) -> Bool {
+        var reference: EventHotKeyRef?
+        let result = RegisterEventHotKey(chord.keyCode, chord.modifiers, EventHotKeyID(signature: OSType(0x464C_5350), id: action.hotKeyID), GetApplicationEventTarget(), 0, &reference)
+        if result == noErr, let reference {
+            hotKeys[action] = reference
+            registrationErrors.removeValue(forKey: action)
+            return true
         } else {
-            print("❌ FlowSnip: RegisterEventHotKey failed (\(registerStatus))")
-            hotKeyRef = nil
+            registrationErrors[action] = result
+            onRegistrationError?("\(chord.label) could not be registered. It may be in use by another app (\(result)).")
+            return false
         }
     }
 
-    private func unregisterCarbonHotKey() {
-        if let ref = hotKeyRef {
-            UnregisterEventHotKey(ref)
-            hotKeyRef = nil
-        }
+    private func action(for event: NSEvent) -> CaptureMode? {
+        let chord = ShortcutChord(event: event)
+        if chord == .screenshot { return .screenshot }
+        if chord == aiShortcut { return .aiScan }
+        return nil
     }
 
-    // MARK: - Mechanism 2: NSEvent Global Monitor
+    private func dispatch(_ action: CaptureMode, isRepeat: Bool = false) {
+        guard deduplicator.accepts(action, at: ProcessInfo.processInfo.systemUptime, isRepeat: isRepeat) else { return }
+        if let onActionTriggered {
+            onActionTriggered(action)
+        } else if action == .screenshot {
+            onShortcutTriggered?()
+        }
+    }
 
     private func installGlobalMonitor() {
-        guard globalMonitor == nil else { return }
-
-        // This silently fails without Accessibility permission — no crash, no error
+        guard globalMonitor == nil, AXIsProcessTrusted() else { return }
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            // Check for ⌘+Shift+2
-            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            let isCmd = flags.contains(.command)
-            let isShift = flags.contains(.shift)
-            // Ensure ONLY ⌘+Shift are pressed (not also Control, Option, etc.)
-            let noExtraModifiers = !flags.contains(.control) && !flags.contains(.option)
-
-            if event.keyCode == 19 && isCmd && isShift && noExtraModifiers {
-                print("🔑 FlowSnip: NSEvent global monitor fired!")
-                self?.onShortcutTriggered?()
-            }
-        }
-
-        if globalMonitor != nil {
-            print("✅ FlowSnip: NSEvent global monitor installed (Accessibility granted)")
-        } else {
-            print("⚠️ FlowSnip: NSEvent global monitor not available (Accessibility not granted)")
+            guard let self, let action = self.action(for: event) else { return }
+            self.dispatch(action, isRepeat: event.isARepeat)
         }
     }
 
-    private func removeGlobalMonitor() {
-        if let monitor = globalMonitor {
-            NSEvent.removeMonitor(monitor)
-            globalMonitor = nil
-        }
-    }
-
-    // MARK: - Accessibility Retry
-
-    /// Periodically checks if Accessibility was granted, then installs the global monitor.
     private func startAccessibilityRetry() {
         accessibilityRetryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
             guard let self = self else { timer.invalidate(); return }
-
             if AXIsProcessTrusted() {
                 self.installGlobalMonitor()
                 if self.globalMonitor != nil {
                     timer.invalidate()
                     self.accessibilityRetryTimer = nil
-                    print("✅ FlowSnip: Accessibility granted — global monitor now active")
                 }
             }
         }
