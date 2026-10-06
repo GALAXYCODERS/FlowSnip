@@ -79,7 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let screenGranted = await checkScreenRecordingPermission()
 
             await MainActor.run {
-                if axGranted && screenGranted {
+                if axGranted && screenGranted && UserDefaults.standard.bool(forKey: "FlowSnip_AI_OnboardingCompleted") {
                     showReadyScreen()
                 } else {
                     showOnboarding()
@@ -130,16 +130,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let onboardingView = OnboardingView {
+        _ = prepareAI()
+        guard let configuration = aiConfiguration, let models = localModels, let catalog = cloudCatalog else { return }
+        let recorder = AIShortcutRecorder(configuration: configuration) { [weak self] active in
+            self?.shortcutRecordingChanged(active)
+        }
+        let onboardingView = OnboardingView(configuration: configuration, localModels: models, catalog: catalog, recorder: recorder) {
             // Onboarding complete
             UserDefaults.standard.set(true, forKey: self.onboardingCompletedKey)
+            UserDefaults.standard.set(true, forKey: "FlowSnip_AI_OnboardingCompleted")
             self.onboardingWindow?.close()
             self.onboardingWindow = nil
             self.checkScreenRecording()
         }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 520),
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 640),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false

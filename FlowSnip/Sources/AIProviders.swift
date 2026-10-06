@@ -198,9 +198,9 @@ struct OpenRouterClient: @unchecked Sendable {
 struct OpenRouterAIProvider: AIProvider {
     let client: OpenRouterClient
     let model: OpenRouterModel
+    let apiKey: String
     func respond(_ request: AIRequest, onChunk: @escaping @Sendable (String) async -> Void) async throws -> AIResponseMetadata {
-        guard let key = try KeychainCredentialStore.read(), !key.isEmpty else { throw AIError.missingKey }
-        return try await client.respond(request, model: model, apiKey: key, onChunk: onChunk)
+        return try await client.respond(request, model: model, apiKey: apiKey, onChunk: onChunk)
     }
 }
 

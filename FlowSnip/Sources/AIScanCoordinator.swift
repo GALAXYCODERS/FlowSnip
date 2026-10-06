@@ -24,6 +24,7 @@ final class AIScanCoordinator: ObservableObject {
     private var lastPrompt = ""
     private var lockedProvider: AIProviderChoice?
     private var lockedModelID = ""
+    private var lockedCredentialRevision: UUID?
     private var streamFilter = ReasoningStreamFilter()
     private var clipboardFeedbackTask: Task<Void, Never>?
 
@@ -49,7 +50,7 @@ final class AIScanCoordinator: ObservableObject {
             guard configuration.cloudConsent else { throw AIError.cloudConsentRequired }
             guard !configuration.cloudModelID.isEmpty, catalog.model(configuration.cloudModelID) != nil else { throw AIError.noCloudModel }
             configuration.refreshKeyStatus()
-            guard let key = try KeychainCredentialStore.read(), !key.isEmpty else { throw AIError.missingKey }
+            _ = try configuration.apiKey()
         }
     }
 
@@ -80,7 +81,8 @@ final class AIScanCoordinator: ObservableObject {
                 case .openRouter:
                     guard let model = catalog.model(configuration.cloudModelID) else { throw AIError.noCloudModel }
                     lockedModelID = model.id
-                    provider = OpenRouterAIProvider(client: catalog.client, model: model)
+                    lockedCredentialRevision = configuration.credentialRevision
+                    provider = OpenRouterAIProvider(client: catalog.client, model: model, apiKey: try configuration.apiKey())
                     providerLabel = "OpenRouter"
                     modelLabel = model.name
                 }
@@ -189,7 +191,7 @@ final class AIScanCoordinator: ObservableObject {
     func configurationChanged() {
         guard let lockedProvider else { return }
         let currentID = configuration.provider == .local ? configuration.localModelID : configuration.cloudModelID
-        if lockedProvider != configuration.provider || lockedModelID != currentID || (lockedProvider == .openRouter && (!configuration.cloudConsent || !configuration.hasAPIKey)) {
+        if lockedProvider != configuration.provider || lockedModelID != currentID || (lockedProvider == .openRouter && (!configuration.cloudConsent || !configuration.hasAPIKey || lockedCredentialRevision != configuration.credentialRevision)) {
             stop()
             provider = nil
             error = "AI settings changed. Start a new scan to use them."
@@ -234,5 +236,6 @@ final class AIScanCoordinator: ObservableObject {
         clipboardFeedback = ""
         lockedProvider = nil
         lockedModelID = ""
+        lockedCredentialRevision = nil
     }
 }

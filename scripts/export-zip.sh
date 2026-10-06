@@ -44,6 +44,7 @@ fi
 
 LICENSE_DIR="$APP_PATH/Contents/Resources/Licenses"
 mkdir -p "$LICENSE_DIR"
+chmod -R u+w "$LICENSE_DIR"
 CHECKOUT_DIR="$DERIVED_DATA/SourcePackages/checkouts"
 if [[ ! -d "$CHECKOUT_DIR" ]]; then
   echo "Error: Package checkout licenses are unavailable in $CHECKOUT_DIR" >&2

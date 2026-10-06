@@ -1,7 +1,112 @@
 import XCTest
 import Carbon
+import WebKit
 
 final class AIWorkflowTests: XCTestCase {
+    @MainActor
+    func testCloudKeyIsReadOnlyOncePerAppSession() throws {
+        var reads = 0
+        let credentials = APICredentialAccess(containsKey: { true }, read: { reads += 1; return "test-key" }, save: { _ in }, remove: {})
+        let configuration = AIConfiguration(credentials: credentials)
+        configuration.refreshKeyStatus()
+        XCTAssertEqual(reads, 0)
+        for _ in 0..<10 { XCTAssertEqual(try configuration.apiKey(), "test-key") }
+        configuration.refreshKeyStatus()
+        XCTAssertEqual(reads, 1)
+        let nextSession = AIConfiguration(credentials: credentials)
+        XCTAssertEqual(try nextSession.apiKey(), "test-key")
+        XCTAssertEqual(reads, 2)
+    }
+
+    @MainActor
+    func testSavingAndRemovingKeysUpdatesSessionWithoutExtraReads() throws {
+        var stored: String?
+        var reads = 0
+        let credentials = APICredentialAccess(containsKey: { stored != nil }, read: { reads += 1; return stored },
+            save: { stored = $0 }, remove: { stored = nil })
+        let configuration = AIConfiguration(credentials: credentials)
+        let originalRevision = configuration.credentialRevision
+        try configuration.saveKey("  test-first  ")
+        XCTAssertEqual(try configuration.apiKey(), "test-first")
+        XCTAssertEqual(reads, 0)
+        XCTAssertNotEqual(configuration.credentialRevision, originalRevision)
+        try configuration.saveKey("test-replacement")
+        XCTAssertEqual(try configuration.apiKey(), "test-replacement")
+        XCTAssertEqual(reads, 0)
+        try configuration.removeKey()
+        XCTAssertFalse(configuration.hasAPIKey)
+        XCTAssertThrowsError(try configuration.apiKey())
+        XCTAssertEqual(reads, 1)
+    }
+
+    @MainActor
+    func testDeniedKeychainReadDoesNotCacheFailure() throws {
+        var reads = 0
+        let credentials = APICredentialAccess(containsKey: { true }, read: {
+            reads += 1
+            if reads == 1 { throw AIError.message("Access denied") }
+            return "test-key"
+        }, save: { _ in }, remove: {})
+        let configuration = AIConfiguration(credentials: credentials)
+        XCTAssertThrowsError(try configuration.apiKey())
+        XCTAssertEqual(try configuration.apiKey(), "test-key")
+        XCTAssertEqual(try configuration.apiKey(), "test-key")
+        XCTAssertEqual(reads, 2)
+    }
+
+    @MainActor
+    func testBundledRendererTypesetsMathAndPreservesCode() async throws {
+        let webView = try await renderer()
+        let text = #"The domain requires (x\ge \tfrac12). Only the smaller root works."#
+            + "\n[\nx^2-104x+208=0,\n]\n\n"
+            + #"\[\boxed{x=52-8\sqrt{39}}\]"#
+            + "\n\n```latex\n\\sqrt{39}\n```\n\n**Result**\n\n| Root | Valid |\n| --- | --- |\n| Small | Yes |"
+        _ = try await webView.callAsyncJavaScript("window.renderAnswer(text)", arguments: ["text": text], in: nil, contentWorld: .page)
+        let mathCount = try await webView.evaluateJavaScript("document.querySelectorAll('.katex').length") as? Int
+        XCTAssertEqual(mathCount, 3)
+        let displayCount = try await webView.evaluateJavaScript("document.querySelectorAll('.katex-display').length") as? Int
+        XCTAssertEqual(displayCount, 2)
+        let radicalPaths = try await webView.evaluateJavaScript("document.querySelectorAll('.katex svg path').length") as? Int
+        XCTAssertGreaterThan(radicalPaths ?? 0, 0)
+        let radicalVisible = try await webView.evaluateJavaScript("document.querySelector('.katex svg path').getBoundingClientRect().height > 0") as? Bool
+        XCTAssertEqual(radicalVisible, true)
+        let code = try await webView.evaluateJavaScript("document.querySelector('pre code').textContent") as? String
+        XCTAssertEqual(code?.trimmingCharacters(in: .whitespacesAndNewlines), #"\sqrt{39}"#)
+        let tableCount = try await webView.evaluateJavaScript("document.querySelectorAll('table').length") as? Int
+        XCTAssertEqual(tableCount, 1)
+    }
+
+    @MainActor
+    func testRendererHandlesStreamingMathAndBlocksActiveContent() async throws {
+        let webView = try await renderer()
+        for text in [#"Answer: $$\boxed{x=52"#, #"Answer: $x=52-8\sqrt{39}$"#,
+                     "<script>window.compromised=true</script><img src='https://example.com/pixel' onerror='window.compromised=true'>\n\n[Bad](javascript:alert(1))\n\n$$\\notacommand{x}$$"] {
+            _ = try await webView.callAsyncJavaScript("window.renderAnswer(text)", arguments: ["text": text], in: nil, contentWorld: .page)
+        }
+        let activeContent = try await webView.evaluateJavaScript("document.querySelector('#answer').querySelectorAll('img,script,iframe,object').length") as? Int
+        let compromised = try await webView.evaluateJavaScript("window.compromised === true") as? Bool
+        let unsafeLinks = try await webView.evaluateJavaScript("document.querySelectorAll('a[href^=\"javascript:\"]').length") as? Int
+        let fallbacks = try await webView.evaluateJavaScript("document.querySelectorAll('.math-fallback').length") as? Int
+        XCTAssertEqual(activeContent, 0)
+        XCTAssertEqual(compromised, false)
+        XCTAssertEqual(unsafeLinks, 0)
+        XCTAssertEqual(fallbacks, 1)
+    }
+
+    @MainActor
+    private func renderer() async throws -> WKWebView {
+        _ = NSApplication.shared
+        let bundle = Bundle(for: AIWorkflowTests.self)
+        let url = try XCTUnwrap(bundle.url(forResource: "index", withExtension: "html", subdirectory: "AnswerRenderer"))
+        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 420, height: 600), configuration: AnswerWebView.configuration())
+        webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        for _ in 0..<200 {
+            if let ready = try? await webView.evaluateJavaScript("typeof window.renderAnswer === 'function'"), ready as? Bool == true { return webView }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        throw AIError.message("The bundled answer renderer did not load.")
+    }
+
     func testDefaultShortcutsAreDistinctAndValid() {
         XCTAssertTrue(ShortcutChord.screenshot.isValid)
         XCTAssertTrue(ShortcutChord.aiScan.isValid)

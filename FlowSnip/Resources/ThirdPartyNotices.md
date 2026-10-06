@@ -15,6 +15,11 @@ FlowSnip uses the following open-source projects. Their complete license files a
 | Swift ASN.1 | 1.7.3 | Apache-2.0 with Swift exception | https://github.com/apple/swift-asn1 |
 | Swift Numerics | 1.1.1 | Apache-2.0 with Swift exception | https://github.com/apple/swift-numerics |
 | yyjson | 0.12.0 | MIT | https://github.com/ibireme/yyjson |
+| KaTeX | 0.19.0 | MIT | https://github.com/KaTeX/KaTeX |
+| Marked | 18.1.0 | MIT | https://github.com/markedjs/marked |
+| DOMPurify | 3.4.16 | Apache-2.0 (chosen dual-license option) | https://github.com/cure53/DOMPurify |
+
+The answer-rendering libraries, fonts, and their complete licenses are bundled in `AnswerRenderer`. No external CDN is used.
 
 Swift Syntax is a package dependency for optional upstream features but is not linked into FlowSnip's application runtime. FlowSnip does not use third-party build macros or disable Xcode macro validation.
 

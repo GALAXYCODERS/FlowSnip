@@ -24,6 +24,32 @@ private actor ProviderTestText {
 }
 
 final class AIProviderTests: XCTestCase {
+    func testCloudProviderReusesInjectedSessionKey() async throws {
+        var requestCount = 0
+        FixtureURLProtocol.handler = { request in
+            requestCount += 1
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer test-session-key")
+            let event = #"data: {"choices":[{"delta":{"content":"Answer"},"finish_reason":"stop"}]}"# + "\n\ndata: [DONE]\n\n"
+            return (200, [Data(event.utf8)])
+        }
+        defer { FixtureURLProtocol.handler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [FixtureURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel() }
+        let provider = OpenRouterAIProvider(client: OpenRouterClient(session: session),
+            model: OpenRouterModel.suggestions[0], apiKey: "test-session-key")
+        for _ in 0..<3 {
+            let collector = ProviderTestText()
+            _ = try await provider.respond(AIRequest(imageData: Data([1]), prompt: "Explain", history: [], extendedReasoning: false)) {
+                chunk in await collector.append(chunk)
+            }
+            let text = await collector.value
+            XCTAssertEqual(text, "Answer")
+        }
+        XCTAssertEqual(requestCount, 3)
+    }
+
     func testSSECommentsAndMultilineData() throws {
         var parser = ServerSentEventParser()
         XCTAssertNil(try parser.consume(": keepalive"))

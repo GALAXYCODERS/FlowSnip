@@ -78,7 +78,7 @@ Haptic feedback on capture, animated "Copied!" toast, live size indicator during
 <td>
 
 **Guided Onboarding**
-First-launch wizard walks you through Accessibility and Screen Recording permissions step by step — no guesswork.
+First-launch wizard walks you through Accessibility, Screen Recording, and local or OpenRouter AI setup. AI setup can be deferred without blocking screenshots.
 
 </td>
 </tr>
@@ -88,7 +88,7 @@ First-launch wizard walks you through Accessibility and Screen Recording permiss
 
 `Command + Option + Shift + 2` opens a distinct mint-white animated selection. Release to analyze the crop in a compact native assistant panel. Ask follow-up questions, copy the answer or image, translate captured text, or switch to the separate Vision OCR tab. AI scans leave the clipboard untouched until a copy action is selected.
 
-Open **AI Settings** from the menu bar for first-use setup:
+First launch includes AI setup alongside permissions. Existing users see the expanded guide once after updating. Choose **Set Up Later** to keep using screenshots, or configure AI immediately. Settings remain available from **AI Settings** in the menu bar:
 
 1. **On This Mac:** FlowSnip reads the chip, unified memory, Metal working-set budget, and OS locally. It recommends a pinned 4-bit vision model; confirm its download before use. An M4/M5 with 16 GB starts with Qwen3.5 4B. Larger-memory Macs can choose 9B, while the 27B profile is an optional larger-memory candidate.
 2. **OpenRouter:** Enable cloud processing, enter your own key into the secure field, and explicitly select an image-capable model. GPT-6 Luna and Gemini 3.8 Flash are suggestions; the searchable catalog includes other choices. Keys are stored in Keychain, not preferences.
@@ -97,6 +97,14 @@ Open **AI Settings** from the menu bar for first-use setup:
 Models are stored in `~/Library/Application Support/FlowSnip/Models`, not inside the installer. Downloads can be paused/resumed or removed; **Check Performance** uses generated error, receipt, and chart fixtures. The local runtime unloads after inactivity or memory pressure. No provider/model substitution or local-to-cloud fallback occurs silently.
 
 The first local request may take several seconds while the model loads. Small local models can misread or misinterpret content; check extracted text and important numbers before relying on an answer. Calibration reports are workload-specific checks, not accuracy guarantees.
+
+**What the AI receives:** Both local and OpenRouter vision models receive the selected crop as an image, your question, and bounded conversation history. Large crops are resized proportionally to a maximum dimension of 1600 pixels. The separate **Extracted Text** tab uses Apple's on-device Vision OCR; that OCR output is not sent as a replacement for the image or appended to AI requests. For cloud scans, only the crop is uploaded, never the entire screen.
+
+Answers render Markdown lists, tables, code blocks, and LaTeX equations using bundled offline libraries. Rendering does not contact a CDN or load remote images, and model-supplied HTML/scripts are not executed. **Copy Answer** copies the original Markdown/LaTeX text.
+
+**Keychain prompts:** The first cloud scan or verification unlocks the saved key once; FlowSnip then reuses it in memory for the rest of the running app session. Subsequent scans and follow-ups do not read Keychain again. Saving a key makes it immediately usable in the current session; replacement/removal updates the cache and invalidates an assistant using the old credential. The key is not written to preferences or an unprotected file. Checking whether a key is saved uses noninteractive metadata, not the secret.
+
+macOS may still request authorization after FlowSnip quits/restarts or an ad-hoc-signed build is replaced. This is a macOS dialog asking for the login Keychain password, usually your Mac login password, not the OpenRouter API key. Only grant access to a build you trust. Local scans need no API key or Keychain authorization. A stable Developer ID signing identity is the longer-term solution for consistent access across app updates.
 
 ---
 

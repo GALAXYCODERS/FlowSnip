@@ -133,9 +133,13 @@ struct AssistantPanelView: View {
                                     Text("You").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
                                 }
                                 if !message.text.isEmpty {
-                                    Text(LocalizedStringKey(message.text)).font(.system(size: 13)).textSelection(.enabled)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .fixedSize(horizontal: false, vertical: true)
+                                    if message.role == .assistant {
+                                        AnswerMarkdownView(text: message.text)
+                                    } else {
+                                        Text(message.text).font(.system(size: 13)).textSelection(.enabled)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
                                 }
                             }
                         }
@@ -213,6 +217,7 @@ struct AISettingsView: View {
     @ObservedObject var localModels: LocalModelManager
     @ObservedObject var catalog: OpenRouterCatalog
     @ObservedObject var recorder: AIShortcutRecorder
+    var isOnboarding = false
     @State private var modelSearch = ""
     @State private var enteredKey = ""
     @State private var keyMessage = ""
@@ -224,23 +229,25 @@ struct AISettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                Label("AI Settings", systemImage: "sparkles.rectangle.stack")
+                Label(isOnboarding ? "Choose Your AI" : "AI Settings", systemImage: "sparkles.rectangle.stack")
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                 Picker("Provider", selection: $configuration.provider) {
                     ForEach(AIProviderChoice.allCases) { provider in Text(provider.title).tag(provider) }
                 }
                 .pickerStyle(.segmented)
                 if configuration.provider == .local { localSettings } else { cloudSettings }
-                Divider()
-                shortcutSettings
-                Toggle("Thorough responses", isOn: $configuration.extendedReasoning)
+                if !isOnboarding {
+                    Divider()
+                    shortcutSettings
+                    Toggle("Thorough responses", isOn: $configuration.extendedReasoning)
+                }
                 if let operationError {
                     Label(operationError, systemImage: "exclamationmark.triangle").font(.system(size: 12)).foregroundStyle(.red)
                 }
             }
             .padding(24).frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(minWidth: 560, minHeight: 520)
+        .frame(minWidth: 560, minHeight: isOnboarding ? 0 : 520)
         .background(Color(nsColor: .windowBackgroundColor))
         .task {
             configuration.refreshKeyStatus()
@@ -456,7 +463,7 @@ struct AISettingsView: View {
         Task {
             defer { isCheckingKey = false }
             do {
-                let key = enteredKey.isEmpty ? try KeychainCredentialStore.read() ?? "" : enteredKey
+                let key = enteredKey.isEmpty ? try configuration.apiKey() : enteredKey
                 try await catalog.client.verifyKey(key)
                 if !enteredKey.isEmpty { try configuration.saveKey(enteredKey); enteredKey = "" }
                 keyMessage = "Key verified."

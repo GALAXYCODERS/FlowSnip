@@ -1,4 +1,4 @@
-# FlowSnip 2.0 Validation Record
+# FlowSnip 2.0.2 Validation Record
 
 Date: 2026-10-06
 
@@ -6,18 +6,22 @@ Date: 2026-10-06
 
 - Xcode 27.0 (27A266a), macOS SDK 27.0, and Apple's Metal compiler.
 - Debug builds and the signed optimized Release app for arm64/macOS 27.
-- 40 automated tests passed with no failures. One opt-in live-screen test skipped because the test process lacks Screen Recording permission.
+- 46 automated tests passed with no failures. One opt-in live-screen test skipped because the test process lacks Screen Recording permission.
 - Native hosted light/dark assistant and local/cloud settings previews. Actual AppKit controls, scroll content, model picker, and source preview render without the unsupported ImageRenderer placeholders.
+- Expanded first-launch onboarding with local/OpenRouter setup and an explicit deferral option; hosted local/light and cloud/dark previews.
+- Bundled offline Markdown/KaTeX/DOMPurify rendering in actual WebKit: equations from the reported problem, visible radical SVG geometry, literal fenced code, tables, incomplete streamed delimiters, invalid-math fallback, and blocked script/image/unsafe-link content. Native 360px/460px light/dark snapshots passed width checks and were visually inspected.
+- Key-presence checks now request only Keychain metadata with interaction disabled, never the secret. Real key reads remain limited to verification or cloud generation.
+- Session credential tests use an injected fake store: repeated accesses read once per configuration lifetime, a fresh app session reads again, save/replace/remove update the cache, and denied reads remain recoverable. Fixture-backed cloud-provider requests reuse the injected key without Keychain access. Actual user Keychain authorization was not requested for these tests; macOS may still prompt once after restart/update.
 - Synthetic OCR, streamed assistant response, follow-up, retry without duplicated turns, stop followed by a new question, and private clipboard text/image copying.
 - Real pinned Qwen3.5-4B 4-bit vision inference on Apple M5 / 16 GB, using generated error-message, receipt, and chart images.
 - Cached/offline inference, cancellation that releases the busy state, and a receipt-image follow-up retaining currency context.
 - OpenRouter public catalog refresh, filtering to image-input/text-output models, and the proposed GPT-6 Luna / Gemini 3.8 Flash choices.
 - URLSession fixture checks for split network chunks, SSE event boundaries, usage/completion, disconnects, authentication failures, size limits, and no automatic generation retry. No real API key or paid request was used.
-- ZIP/DMG packaging, ad-hoc signing verification, version 2.0/build 2, macOS 27 minimum, arm64 architecture, dependency resource bundles, license collection, and DMG checksum verification.
+- ZIP/DMG packaging, ad-hoc signing verification, macOS 27 minimum, arm64 architecture, dependency resource bundles, license collection, and DMG checksum verification. The current update is version 2.0.2/build 4.
 
 ## Local Measurements
 
-The optimized distributed app was tested on the current M5/16 GB Mac. The first synthetic code request included model loading and took approximately 8 seconds to its first token and 9.4 seconds to finish. Warm receipt and chart requests took approximately 0.74-0.75 seconds to their first token and 1.1 seconds to finish. Peak MLX memory was approximately 3.8 GB.
+The 2.0 optimized app was tested on the current M5/16 GB Mac. The first synthetic code request included model loading and took approximately 8 seconds to its first token and 9.4 seconds to finish. Warm receipt and chart requests took approximately 0.74-0.75 seconds to their first token and 1.1 seconds to finish. Peak MLX memory was approximately 3.8 GB. These measurements were not repeated for the 2.0.1/2.0.2 onboarding/renderer/credential updates; native UI and workflow validation was repeated.
 
 These are three small synthetic crops, not a general speed claim. Larger crops, long questions, extended reasoning, other running apps, and different chips change the results.
 
@@ -35,6 +39,6 @@ Receipt total/currency and highest chart bar matched the basic fixture expectati
 
 - `build/FlowSnip.dmg`: verified drag-to-Applications installer.
 - `build/FlowSnip.zip`: signed app ZIP alternative.
-- `build/Release/FlowSnip.app`: signed version 2.0 application.
+- `build/Release/FlowSnip.app`: signed version 2.0.2 application.
 
 Quit the old running copy before replacing it in Applications. Separately stored model weights, preferences, and screenshot counts are not overwritten by replacing the application.

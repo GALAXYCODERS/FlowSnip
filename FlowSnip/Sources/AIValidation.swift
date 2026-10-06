@@ -1,6 +1,7 @@
 import Cocoa
 import SwiftUI
 import Combine
+import WebKit
 
 private struct UIValidationProvider: AIProvider {
     func respond(_ request: AIRequest, onChunk: @escaping @Sendable (String) async -> Void) async throws -> AIResponseMetadata {
@@ -104,12 +105,21 @@ enum AIValidationRunner {
         let settings = AISettingsView(configuration: configuration, localModels: manager, catalog: catalog, recorder: recorder)
         try await render(settings, filename: "settings-local.png", size: CGSize(width: 700, height: 660), scheme: .light, directory: directory)
         await catalog.refresh()
+        let welcome = OnboardingView(configuration: configuration, localModels: manager, catalog: catalog,
+            recorder: recorder, onComplete: {})
+        try await render(welcome, filename: "onboarding-welcome.png", size: CGSize(width: 640, height: 640), scheme: .light, directory: directory)
+        let onboarding = OnboardingView(configuration: configuration, localModels: manager, catalog: catalog,
+            recorder: recorder, initialStep: 3, onComplete: {})
+        try await render(onboarding, filename: "onboarding-local.png", size: CGSize(width: 640, height: 640), scheme: .light, directory: directory)
         configuration.provider = .openRouter
         try await render(settings, filename: "settings-cloud.png", size: CGSize(width: 700, height: 660), scheme: .light, directory: directory)
+        try await render(onboarding, filename: "onboarding-cloud.png", size: CGSize(width: 640, height: 640), scheme: .dark, directory: directory)
+        try await renderAnswerUI(to: directory)
         let report: [String: Any] = ["ocr": "passed", "followUp": "passed", "privateClipboardCopy": "passed",
             "privateImageCopy": "passed", "catalogModelCount": catalog.models.count,
             "retry": "passed", "stopThenFollowUp": "passed",
-            "screenRecordingPermission": CGPreflightScreenCaptureAccess(), "nativeUIRenders": 4]
+            "screenRecordingPermission": CGPreflightScreenCaptureAccess(), "nativeUIRenders": 11,
+            "markdownMathRendering": "passed"]
         try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
             .write(to: directory.appendingPathComponent("ui-validation.json"), options: .atomic)
         coordinator.cancel()
@@ -142,6 +152,45 @@ enum AIValidationRunner {
         try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
             .write(to: directory.appendingPathComponent("local-lifecycle.json"), options: .atomic)
         print("Local cancellation and image follow-up checks passed.")
+    }
+
+    private static func renderAnswerUI(to directory: URL) async throws {
+        guard let url = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "AnswerRenderer") else {
+            throw AIError.message("The bundled renderer is missing from the app.")
+        }
+        let text = #"The domain requires (x\ge \tfrac12). Squaring after isolating one radical gives"#
+            + "\n[\nx^2-104x+208=0,\n]\n"
+            + #"so (x=52\pm8\sqrt{39}). Only the smaller value satisfies the original equation; the larger is extraneous."#
+            + "\n[\n" + #"\boxed{x=52-8\sqrt{39}}"# + "\n]\n"
+            + "\n**Code example**\n\n```swift\nlet answer = 52 - 8 * sqrt(39.0)\n```\n\n| Root | Valid |\n| --- | --- |\n| Smaller | Yes |\n| Larger | No |"
+        for width in [360, 460] {
+            for scheme in [ColorScheme.light, .dark] {
+                let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: width, height: 640), configuration: AnswerWebView.configuration())
+                let window = NSWindow(contentRect: webView.frame, styleMask: [.titled], backing: .buffered, defer: false)
+                window.isReleasedWhenClosed = false
+                window.appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
+                window.contentView = webView
+                window.orderFront(nil)
+                defer { window.close() }
+                webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+                var loaded = false
+                for _ in 0..<200 {
+                    if let ready = try? await webView.evaluateJavaScript("typeof window.renderAnswer === 'function'"), ready as? Bool == true { loaded = true; break }
+                    try await Task.sleep(for: .milliseconds(50))
+                }
+                guard loaded else { throw AIError.message("The bundled answer renderer did not load.") }
+                _ = try await webView.callAsyncJavaScript("window.renderAnswer(text); await document.fonts.ready", arguments: ["text": text], in: nil, contentWorld: .page)
+                let mathCount = try await webView.evaluateJavaScript("document.querySelectorAll('.katex').length") as? Int
+                let radicalPaths = try await webView.evaluateJavaScript("document.querySelectorAll('.katex svg path').length") as? Int
+                let radicalVisible = try await webView.evaluateJavaScript("document.querySelector('.katex svg path').getBoundingClientRect().height > 0") as? Bool
+                let overflow = try await webView.evaluateJavaScript("document.documentElement.scrollWidth > window.innerWidth") as? Bool
+                guard mathCount == 4, (radicalPaths ?? 0) >= 2, radicalVisible == true, overflow == false else { throw AIError.message("The math answer failed its rendering or width check.") }
+                let image = try await webView.takeSnapshot(configuration: nil)
+                guard let bitmap = image.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:)),
+                      let png = bitmap.representation(using: .png, properties: [:]) else { throw AIError.message("The math preview could not be encoded.") }
+                try png.write(to: directory.appendingPathComponent("answer-\(width)-\(scheme == .dark ? "dark" : "light").png"), options: .atomic)
+            }
+        }
     }
 
     private static func waitUntilReady(_ coordinator: AIScanCoordinator) async throws {

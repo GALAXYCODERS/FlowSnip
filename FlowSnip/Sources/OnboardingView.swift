@@ -3,8 +3,12 @@ import Cocoa
 import ScreenCaptureKit
 
 /// A multi-step onboarding window shown on first launch.
-/// Walks the user through: Welcome → Accessibility → Screen Recording → How to Use.
+/// Walks the user through: Welcome → Accessibility → Screen Recording → AI Setup → How to Use.
 struct OnboardingView: View {
+    @ObservedObject var configuration: AIConfiguration
+    @ObservedObject var localModels: LocalModelManager
+    let catalog: OpenRouterCatalog
+    let recorder: AIShortcutRecorder
 
     @State private var currentStep = 0
     @State private var accessibilityGranted = false
@@ -14,7 +18,25 @@ struct OnboardingView: View {
 
     let onComplete: () -> Void
 
-    private let totalSteps = 4
+    init(configuration: AIConfiguration, localModels: LocalModelManager, catalog: OpenRouterCatalog,
+         recorder: AIShortcutRecorder, initialStep: Int = 0, onComplete: @escaping () -> Void) {
+        self.configuration = configuration
+        self.localModels = localModels
+        self.catalog = catalog
+        self.recorder = recorder
+        self.onComplete = onComplete
+        _currentStep = State(initialValue: initialStep)
+    }
+
+    private let totalSteps = 5
+
+    private var aiReady: Bool {
+        if configuration.provider == .local {
+            guard let model = LocalModelSpec.find(configuration.localModelID) else { return false }
+            return configuration.hardware.supports(model) && localModels.downloadedModels.contains(model.id)
+        }
+        return configuration.cloudConsent && configuration.hasAPIKey && catalog.model(configuration.cloudModelID) != nil
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,7 +45,9 @@ struct OnboardingView: View {
                 case 0: welcomeStep
                 case 1: accessibilityStep
                 case 2: screenRecordingStep
-                case 3: howToUseStep
+                case 3: AISettingsView(configuration: configuration, localModels: localModels,
+                                       catalog: catalog, recorder: recorder, isOnboarding: true)
+                case 4: howToUseStep
                 default: EmptyView()
                 }
             }
@@ -40,7 +64,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, 28)
                 .padding(.vertical, 16)
         }
-        .frame(width: 600, height: 520)
+        .frame(width: 640, height: 640)
         .background(
             VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
         )
@@ -72,7 +96,7 @@ struct OnboardingView: View {
             Text("Welcome to FlowSnip")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
 
-            Text("A lightning-fast screen capture tool\nthat copies directly to your clipboard.")
+            Text("Capture to your clipboard or analyze a selected\nregion with local or cloud AI.")
                 .font(.system(size: 15))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -81,9 +105,10 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 10) {
-                featureRow(icon: "keyboard", text: "Press  ⌘ + Shift + 2  to capture")
+                featureRow(icon: "keyboard", text: "Screenshot: " + ShortcutChord.screenshot.label)
+                featureRow(icon: "sparkles", text: "AI Scan: " + configuration.aiShortcut.label)
                 featureRow(icon: "crop", text: "Drag to select any region")
-                featureRow(icon: "doc.on.clipboard", text: "Instantly copied to clipboard")
+                featureRow(icon: "doc.on.clipboard", text: "Screenshots copy instantly to clipboard")
             }
 
             Spacer()
@@ -280,6 +305,9 @@ struct OnboardingView: View {
                 howToRow(icon: "escape", iconColor: .gray,
                          title: "Esc — Cancel",
                          subtitle: "Dismiss without capturing")
+                howToRow(icon: "sparkles", iconColor: .mint,
+                         title: configuration.aiShortcut.label,
+                         subtitle: aiReady ? "AI Scan opens an assistant for your crop" : "Finish AI setup later in AI Settings")
             }
 
             Spacer()
@@ -378,11 +406,16 @@ struct OnboardingView: View {
                 }
 
                 if currentStep < totalSteps - 1 {
+                    if currentStep == 3 {
+                        Button("Set Up Later") { withAnimation { currentStep += 1 } }
+                            .buttonStyle(.borderless)
+                    }
                     Button("Continue") {
                         withAnimation { currentStep += 1 }
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.regular)
+                    .disabled(currentStep == 3 && !aiReady)
                 } else {
                     Button("Get Started") {
                         onComplete()
