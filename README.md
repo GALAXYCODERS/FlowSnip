@@ -58,7 +58,7 @@ Beautiful frosted glass overlay with rounded corners, glow effects, and an inver
 <td>
 
 **Multi-Monitor Support**
-The overlay spans seamlessly across all connected displays. Works with any screen arrangement.
+Each connected display gets its own selection overlay, including displays arranged left, right, above, or below the main screen. Each selection stays within the display where the drag starts, with that display's pixel scaling.
 
 </td>
 <td>

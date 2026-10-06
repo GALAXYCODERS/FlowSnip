@@ -1,9 +1,41 @@
 import Cocoa
 import ScreenCaptureKit
+import SwiftUI
 import XCTest
 
 @MainActor
 final class CaptureEngineTests: XCTestCase {
+
+    func testOverlayWindowsUseGlobalDisplayFramesAndLocalContentFrames() throws {
+        let frames = [
+            CGRect(x: 0, y: 0, width: 1512, height: 982),
+            CGRect(x: -1920, y: 0, width: 1920, height: 1080),
+            CGRect(x: 1512, y: 0, width: 1920, height: 1080),
+            CGRect(x: 0, y: 982, width: 1920, height: 1080),
+            CGRect(x: 0, y: -1080, width: 1920, height: 1080),
+            CGRect(x: -1920, y: -200, width: 1920, height: 1080)
+        ]
+        let manager = OverlayWindowManager()
+
+        for frame in frames {
+            for mode in CaptureMode.allCases {
+                for pixelScale: CGFloat in [1, 2] {
+                    let screen = CaptureTestScreen()
+                    screen.testFrame = frame
+                    screen.testPixelScale = pixelScale
+                    let window = manager.createOverlayWindow(for: screen, mode: mode)
+                    defer { window.orderOut(nil) }
+                    let content = try XCTUnwrap(window.contentView as? NSHostingView<LiquidOverlayView>)
+
+                    XCTAssertEqual(window.frame, frame)
+                    XCTAssertEqual(content.frame, CGRect(origin: .zero, size: frame.size))
+                    XCTAssertEqual(content.rootView.screenFrame, frame)
+                    XCTAssertEqual(content.rootView.mode, mode)
+                    XCTAssertEqual(content.rootView.pixelScale, pixelScale)
+                }
+            }
+        }
+    }
 
     func testPrimaryDisplayCropUsesTopLeftCoordinatesAndRetinaPixels() throws {
         let configuration = try CaptureEngine.configuration(
@@ -169,15 +201,18 @@ final class CaptureEngineTests: XCTestCase {
         guard CGPreflightScreenCaptureAccess() else {
             throw XCTSkip("Screen Recording permission must already be granted; this test does not request it.")
         }
-        let screen = try XCTUnwrap(NSScreen.main)
-        let selection = CGRect(x: screen.frame.minX + 10, y: screen.frame.maxY - 16, width: 8, height: 6)
+        let screens = NSScreen.screens
+        XCTAssertFalse(screens.isEmpty)
         let clipboardChangeCount = NSPasteboard.general.changeCount
 
-        let image = try await CaptureEngine().captureImage(rect: selection, screen: screen)
+        for screen in screens {
+            let selection = CGRect(x: screen.frame.minX + 10, y: screen.frame.maxY - 16, width: 8, height: 6)
+            let image = try await CaptureEngine().captureImage(rect: selection, screen: screen)
 
-        XCTAssertEqual(image.width, Int((selection.width * screen.backingScaleFactor).rounded(.up)))
-        XCTAssertEqual(image.height, Int((selection.height * screen.backingScaleFactor).rounded(.up)))
-        XCTAssertEqual(NSPasteboard.general.changeCount, clipboardChangeCount)
+            XCTAssertEqual(image.width, Int((selection.width * screen.backingScaleFactor).rounded(.up)), screen.localizedName)
+            XCTAssertEqual(image.height, Int((selection.height * screen.backingScaleFactor).rounded(.up)), screen.localizedName)
+            XCTAssertEqual(NSPasteboard.general.changeCount, clipboardChangeCount)
+        }
     }
 
     private func assertInvalidSelection(_ selection: CGRect) {
@@ -204,4 +239,12 @@ final class CaptureEngineTests: XCTestCase {
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         return try XCTUnwrap(context.makeImage())
     }
+}
+
+private final class CaptureTestScreen: NSScreen {
+    var testFrame = CGRect.zero
+    var testPixelScale: CGFloat = 1
+
+    override var frame: NSRect { testFrame }
+    override var backingScaleFactor: CGFloat { testPixelScale }
 }

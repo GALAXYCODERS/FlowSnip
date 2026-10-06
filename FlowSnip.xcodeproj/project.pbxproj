@@ -36,6 +36,9 @@
 		AA000027 /* AnswerRenderer in Resources */ = {isa = PBXBuildFile; fileRef = BB000026 /* AnswerRenderer */; };
 		AA000028 /* AnswerMarkdownView.swift in Test Sources */ = {isa = PBXBuildFile; fileRef = BB000025 /* AnswerMarkdownView.swift */; };
 		AA000029 /* AnswerRenderer in Test Resources */ = {isa = PBXBuildFile; fileRef = BB000026 /* AnswerRenderer */; };
+		AA000030 /* OverlayWindowManager.swift in Test Sources */ = {isa = PBXBuildFile; fileRef = BB000004 /* OverlayWindowManager.swift */; };
+		AA000031 /* LiquidOverlayView.swift in Test Sources */ = {isa = PBXBuildFile; fileRef = BB000005 /* LiquidOverlayView.swift */; };
+		AA000032 /* ClipboardToastView.swift in Test Sources */ = {isa = PBXBuildFile; fileRef = BB000008 /* ClipboardToastView.swift */; };
 		AA000100 /* MLXVLM in Frameworks */ = {isa = PBXBuildFile; productRef = DF000001 /* MLXVLM */; };
 		AA000101 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = DF000002 /* MLXLMCommon */; };
 		AA000103 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = DF000004 /* HuggingFace */; };
@@ -304,6 +307,9 @@
 				AA000020 /* AIProviders.swift in Test Sources */,
 				AA000021 /* AIProviderTests.swift in Sources */,
 				AA000028 /* AnswerMarkdownView.swift in Test Sources */,
+				AA000030 /* OverlayWindowManager.swift in Test Sources */,
+				AA000031 /* LiquidOverlayView.swift in Test Sources */,
+				AA000032 /* ClipboardToastView.swift in Test Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

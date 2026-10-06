@@ -32,7 +32,7 @@ xcodebuild test -project FlowSnip.xcodeproj -scheme FlowSnip \
    -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO
 ```
 
-The hostless tests compile actual capture/workflow/provider code without launching onboarding. They cover crop geometry, Retina scaling, cancellation, settings persistence, memory thresholds, split SSE frames, completion, and HTTP errors without paid requests. Clipboard tests use a private pasteboard. The live image-only capture check is skipped unless explicitly enabled; it captures an 8-by-6-point region without saving it and checks that the general clipboard remains unchanged.
+The hostless tests compile actual capture/overlay/workflow/provider code without launching onboarding. They cover native overlay placement on synthetic secondary screens, local content coordinates, crop geometry, Retina scaling, cancellation, settings persistence, memory thresholds, split SSE frames, completion, and HTTP errors without paid requests. Clipboard tests use a private pasteboard. The live image-only capture check is skipped unless explicitly enabled; it captures an 8-by-6-point region on every connected display without saving it and checks that the general clipboard remains unchanged.
 
 To opt into that check when Screen Recording permission is already granted to the test process:
 
@@ -44,7 +44,7 @@ TEST_RUNNER_FLOWSNIP_CAPTURE_SMOKE_TEST=1 xcodebuild test \
    -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO
 ```
 
-The test never requests permission itself. Manually verify the normal shortcut, overlay dismissal, clipboard paste, and Retina/external-display capture before shipping. CI uses GitHub's `xcode-27` Apple Silicon preview runner; hosted execution still needs verification on the next workflow run.
+The test never requests permission itself. Manually verify the normal shortcut, overlay dismissal, clipboard paste, and Retina/external-display capture before shipping. Include a DisplayLink display, move it to each side of the main screen in System Settings, and verify both screenshot and AI scan selections plus the clipboard toast on that display. DisplayLink Manager needs its own Screen Recording approval in addition to FlowSnip's. CI uses GitHub's `xcode-27` Apple Silicon preview runner; hosted execution still needs verification on the next workflow run.
 
 ### Native AI Validation
 

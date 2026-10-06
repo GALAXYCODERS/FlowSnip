@@ -113,14 +113,15 @@ final class OverlayWindowManager {
         }
     }
 
-    private func createOverlayWindow(for screen: NSScreen, mode: CaptureMode) -> NSWindow {
+    func createOverlayWindow(for screen: NSScreen, mode: CaptureMode) -> NSWindow {
         let window = NSWindow(
-            contentRect: screen.frame,
+            contentRect: NSRect(origin: .zero, size: screen.frame.size),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false,
             screen: screen
         )
+        window.setFrame(screen.frame, display: false)
 
         window.level = .screenSaver
         window.isOpaque = false
@@ -145,7 +146,7 @@ final class OverlayWindowManager {
         )
 
         let hostingView = NSHostingView(rootView: overlayView)
-        hostingView.frame = screen.frame
+        hostingView.frame = NSRect(origin: .zero, size: screen.frame.size)
         hostingView.autoresizingMask = [.width, .height]
 
         window.contentView = hostingView
@@ -177,12 +178,13 @@ final class OverlayWindowManager {
         )
 
         let window = NSWindow(
-            contentRect: NSRect(origin: origin, size: toastSize),
+            contentRect: NSRect(origin: .zero, size: toastSize),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false,
             screen: screen
         )
+        window.setFrame(NSRect(origin: origin, size: toastSize), display: false)
         window.level = .floating
         window.isOpaque = false
         window.backgroundColor = .clear
